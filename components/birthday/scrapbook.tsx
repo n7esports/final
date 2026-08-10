@@ -1,415 +1,397 @@
 'use client'
 
-import { useCallback, useRef, useState, useEffect } from 'react'
-import Image from 'next/image'
-import { motion, useMotionValue, animate, useTransform } from 'framer-motion'
-import { memories } from '@/lib/birthday-data'
+import { useState, useRef, useEffect, Suspense } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import {
+  OrbitControls,
+  Text,
+  Sphere,
+  Cylinder,
+  Plane,
+  Environment,
+  Float,
+  Sparkles,
+} from '@react-three/drei'
+import * as THREE from 'three'
+import { motion } from 'framer-motion'
 
-const MAX_DRAG_PX = 260
-const COMMIT_RATIO = 0.35
+// --- Constants ---
+const NUM_BALLOONS = 30
+const NUM_CONFETTI = 200
 
-type Dir = 1 | -1
+// --- Helper: Random color ---
+const randomColor = () => {
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#FF9FF3', '#F368E0']
+  return colors[Math.floor(Math.random() * colors.length)]
+}
 
-function PageContent({ index, isFlipping = false }: { index: number; isFlipping?: boolean }) {
-  const safeIndex = ((index % memories.length) + memories.length) % memories.length
-  const memory = memories[safeIndex]
+// --- Flame Component ---
+function Flame({ position, isLit, blowProgress }: { position: [number, number, number], isLit: boolean, blowProgress: number }) {
+  const ref = useRef<THREE.Mesh>(null)
+  const [scale] = useState(() => 0.3 + Math.random() * 0.2)
   
-  return (
-    <div className={`grid h-full touch-none gap-2 p-2 md:grid-cols-2 md:gap-3 md:p-4 ${isFlipping ? 'pointer-events-none' : ''}`}>
-      <div className="relative flex items-center justify-center">
-        <div className="relative aspect-[4/5] w-full max-w-xs overflow-hidden rounded-xl border border-white/20 shadow-lg md:max-w-sm md:rounded-2xl">
-          <Image
-            src={memory.src || '/placeholder.svg'}
-            alt={memory.caption}
-            fill
-            sizes="(max-width: 768px) 100vw, 320px"
-            draggable={false}
-            className="pointer-events-none object-cover"
-            priority
-          />
-          {/* Star overlay on image */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent" />
-          <div className="absolute inset-0" style={{
-            background: 'radial-gradient(circle at 20% 20%, rgba(255,215,0,0.1) 0%, transparent 50%)'
-          }} />
-          
-          {/* Decorative stars on image */}
-          <div className="absolute top-2 right-2 text-yellow-300/30 text-xl md:top-3 md:right-3 md:text-2xl">✦</div>
-          <div className="absolute bottom-2 left-2 text-yellow-300/20 text-base md:bottom-3 md:left-3 md:text-xl">✦</div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-yellow-300/10 text-4xl md:text-5xl">✦</div>
-        </div>
-      </div>
+  useFrame((state) => {
+    if (!ref.current) return
+    // Flicker
+    if (isLit && blowProgress < 1) {
+      const flicker = 0.9 + Math.sin(state.clock.elapsedTime * 10 + position[0]) * 0.1
+      ref.current.scale.x = scale * flicker
+      ref.current.scale.z = scale * flicker
+      // Sway
+      ref.current.position.x = position[0] + Math.sin(state.clock.elapsedTime * 2 + position[2]) * 0.02
+      ref.current.position.z = position[2] + Math.cos(state.clock.elapsedTime * 2 + position[0]) * 0.02
+    } else {
+      // Extinguish
+      const shrink = 1 - blowProgress
+      ref.current.scale.x = scale * shrink
+      ref.current.scale.z = scale * shrink
+      ref.current.scale.y = scale * (0.5 + 0.5 * shrink) // shrink vertically too
+      // Move upward as if blown
+      ref.current.position.y = position[1] + blowProgress * 0.5
+    }
+  })
 
-      <div className="flex flex-col justify-center gap-1 px-1 md:gap-2 md:px-2">
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[8px] font-medium uppercase tracking-wider text-primary md:px-2.5 md:py-0.5 md:text-[10px]">
-            Page {safeIndex + 1} of {memories.length}
-          </span>
-          <div className="flex-1 border-t border-primary/10" />
-        </div>
-        <h3 className="font-serif text-sm font-semibold italic leading-tight text-primary md:text-xl md:leading-snug">
-          {memory.caption}
-        </h3>
-        <div className="relative">
-          <span className="absolute -left-1 -top-2 text-xl text-primary/20 md:-left-2 md:-top-3 md:text-3xl">"</span>
-          <p className="font-serif text-xs italic leading-relaxed text-card-foreground/90 md:text-sm md:leading-relaxed">
-            {memory.quote}
-          </p>
-          <span className="absolute -bottom-3 right-0 text-xl text-primary/20 md:-bottom-4 md:text-3xl">"</span>
-        </div>
-      </div>
-    </div>
+  return (
+    <mesh ref={ref} position={position}>
+      <sphereGeometry args={[0.08, 8, 8]} />
+      <meshStandardMaterial
+        color={isLit ? '#FF8C00' : '#FF8C00'}
+        emissive={isLit ? '#FF4500' : '#FF4500'}
+        emissiveIntensity={isLit ? 2 : 0.5 * (1 - blowProgress)}
+        transparent
+        opacity={isLit ? 1 : 1 - blowProgress * 0.8}
+      />
+      {/* Glow */}
+      <pointLight intensity={isLit ? 0.8 : 0.8 * (1 - blowProgress)} distance={1.5} color="#FF8C00" />
+    </mesh>
   )
 }
 
-export function Scrapbook() {
-  const [page, setPage] = useState(0)
-  const [dir, setDir] = useState<Dir | null>(null)
-  const [dragging, setDragging] = useState(false)
-  const [isFlipping, setIsFlipping] = useState(false)
-  const total = memories.length
-
-  const containerRef = useRef<HTMLDivElement>(null)
-  const startX = useRef(0)
-  const dirRef = useRef<Dir | null>(null)
-  const animationRef = useRef<any>(null)
+// --- Cake Component ---
+function Cake({ candlesLit, blowProgress }: { candlesLit: boolean, blowProgress: number }) {
+  const cakeRef = useRef<THREE.Group>(null)
   
-  const rotateY = useMotionValue(0)
+  return (
+    <group ref={cakeRef} position={[0, -1.5, 0]}>
+      {/* Cake base */}
+      <Cylinder args={[1.8, 2, 0.4, 32]} position={[0, 0, 0]}>
+        <meshStandardMaterial color="#F5D7B3" roughness={0.8} />
+      </Cylinder>
+      {/* Cake layer 1 */}
+      <Cylinder args={[1.6, 1.8, 0.6, 32]} position={[0, 0.4, 0]}>
+        <meshStandardMaterial color="#E8C9A0" roughness={0.7} />
+      </Cylinder>
+      {/* Frosting layer 1 */}
+      <Cylinder args={[1.7, 1.6, 0.15, 32]} position={[0, 0.7, 0]}>
+        <meshStandardMaterial color="#FFF8F0" roughness={0.4} />
+      </Cylinder>
+      {/* Cake layer 2 */}
+      <Cylinder args={[1.5, 1.6, 0.5, 32]} position={[0, 1.0, 0]}>
+        <meshStandardMaterial color="#D4A574" roughness={0.7} />
+      </Cylinder>
+      {/* Frosting top */}
+      <Cylinder args={[1.6, 1.5, 0.15, 32]} position={[0, 1.3, 0]}>
+        <meshStandardMaterial color="#FFF8F0" roughness={0.4} />
+      </Cylinder>
+      
+      {/* Candles */}
+      {[
+        [-0.4, 1.6, -0.3],
+        [0.4, 1.6, -0.3],
+        [0, 1.6, 0.4],
+        [-0.3, 1.6, 0.3],
+        [0.3, 1.6, 0.3],
+      ].map((pos, i) => (
+        <group key={i} position={[pos[0], pos[1], pos[2]]}>
+          <Cylinder args={[0.05, 0.06, 0.3, 8]}>
+            <meshStandardMaterial color="#FF6B6B" />
+          </Cylinder>
+          <Flame
+            position={[0, 0.35, 0]}
+            isLit={candlesLit}
+            blowProgress={blowProgress}
+          />
+        </group>
+      ))}
+    </group>
+  )
+}
 
-  const creaseShadow = useTransform(rotateY, (v) => {
-    const angle = Math.abs(v)
-    const t = Math.min(angle, 90) / 90
-    return Math.sin(t * Math.PI) * 0.55
+// --- Balloon Component ---
+function Balloon({ index, startDelay }: { index: number, startDelay: number }) {
+  const ref = useRef<THREE.Group>(null)
+  const color = randomColor()
+  const startX = (Math.random() - 0.5) * 8
+  const startZ = (Math.random() - 0.5) * 8
+  const speed = 0.3 + Math.random() * 0.4
+  const swingSpeed = 0.5 + Math.random() * 0.5
+  const swingAmount = 0.5 + Math.random() * 0.5
+  const [startY] = useState(() => -4 - Math.random() * 2)
+  
+  useFrame((state) => {
+    if (!ref.current) return
+    const elapsed = state.clock.elapsedTime - startDelay
+    if (elapsed < 0) return
+    // Float upward
+    ref.current.position.y = startY + elapsed * speed
+    // Sway left-right
+    ref.current.position.x = startX + Math.sin(elapsed * swingSpeed) * swingAmount
+    // Sway forward-back
+    ref.current.position.z = startZ + Math.cos(elapsed * swingSpeed * 0.7) * swingAmount * 0.5
+    // Rotate slightly
+    ref.current.rotation.z = Math.sin(elapsed * swingSpeed * 0.5) * 0.1
+    ref.current.rotation.x = Math.sin(elapsed * swingSpeed * 0.3) * 0.1
   })
 
-  const liftShadow = useTransform(rotateY, (v) => {
-    const angle = Math.abs(v)
-    const t = Math.min(angle, 180) / 180
-    return 0.15 + Math.sin(t * Math.PI) * 0.35
+  return (
+    <group ref={ref} position={[startX, startY, startZ]}>
+      <Float speed={1} rotationIntensity={0.1} floatIntensity={0.1}>
+        {/* Balloon body */}
+        <Sphere args={[0.4, 16, 16]} position={[0, 0, 0]}>
+          <meshStandardMaterial color={color} roughness={0.3} metalness={0.1} emissive={color} emissiveIntensity={0.1} />
+        </Sphere>
+        {/* Balloon knot */}
+        <mesh position={[0, -0.4, 0]}>
+          <coneGeometry args={[0.08, 0.15, 8]} />
+          <meshStandardMaterial color={color} />
+        </mesh>
+        {/* String */}
+        <mesh position={[0, -0.6, 0]}>
+          <cylinderGeometry args={[0.01, 0.01, 0.6, 4]} />
+          <meshStandardMaterial color="#888" />
+        </mesh>
+      </Float>
+    </group>
+  )
+}
+
+// --- Confetti Particle ---
+function Confetti({ startDelay }: { startDelay: number }) {
+  const ref = useRef<THREE.Mesh>(null)
+  const color = randomColor()
+  const startX = (Math.random() - 0.5) * 10
+  const startY = -2 + Math.random() * 2
+  const startZ = (Math.random() - 0.5) * 10
+  const vx = (Math.random() - 0.5) * 2
+  const vy = 1.5 + Math.random() * 3
+  const vz = (Math.random() - 0.5) * 2
+  const rotSpeed = new THREE.Euler(
+    (Math.random() - 0.5) * 10,
+    (Math.random() - 0.5) * 10,
+    (Math.random() - 0.5) * 10
+  )
+  
+  useFrame((state) => {
+    if (!ref.current) return
+    const elapsed = state.clock.elapsedTime - startDelay
+    if (elapsed < 0) return
+    // Simple projectile + gravity
+    const t = elapsed
+    ref.current.position.x = startX + vx * t
+    ref.current.position.y = startY + vy * t - 0.5 * 9.8 * t * t
+    ref.current.position.z = startZ + vz * t
+    // Rotation
+    ref.current.rotation.x += rotSpeed.x * 0.02
+    ref.current.rotation.y += rotSpeed.y * 0.02
+    ref.current.rotation.z += rotSpeed.z * 0.02
   })
 
-  const liftShadowOpacity = useTransform(liftShadow, (v) => v * 0.25)
+  return (
+    <mesh ref={ref}>
+      <planeGeometry args={[0.1, 0.05]} />
+      <meshStandardMaterial color={color} side={THREE.DoubleSide} />
+    </mesh>
+  )
+}
 
-  const completeFlip = useCallback((direction: Dir, targetPage: number) => {
-    // Stop any ongoing animation
-    if (animationRef.current) {
-      animationRef.current.stop()
-      animationRef.current = null
-    }
+// --- Happy Birthday Text (3D Balloon Letters) ---
+function BirthdayText() {
+  const letters = 'Happy Birthday!'.split('')
+  const positions: { [key: string]: [number, number, number] } = {
+    'H': [-3.5, 2.5, 0],
+    'a': [-2.8, 2.5, 0],
+    'p': [-2.1, 2.5, 0],
+    'p': [-1.4, 2.5, 0],
+    'y': [-0.7, 2.5, 0],
+    ' ': [0, 2.5, 0],
+    'B': [0.7, 2.5, 0],
+    'i': [1.4, 2.5, 0],
+    'r': [1.9, 2.5, 0],
+    't': [2.4, 2.5, 0],
+    'h': [2.9, 2.5, 0],
+    'd': [3.6, 2.5, 0],
+    'a': [4.3, 2.5, 0],
+    'y': [5.0, 2.5, 0],
+    '!': [5.7, 2.5, 0],
+  }
 
-    setIsFlipping(true)
-    
-    const targetRotation = direction === 1 ? -180 : 0
-    
-    animationRef.current = animate(rotateY, targetRotation, {
-      type: 'spring',
-      stiffness: 350,
-      damping: 32,
-      onComplete: () => {
-        setPage(targetPage)
-        dirRef.current = null
-        setDir(null)
-        rotateY.set(0)
-        setIsFlipping(false)
-        animationRef.current = null
-      },
-    })
-  }, [rotateY])
+  return (
+    <group position={[0, 0, -2]}>
+      {letters.map((char, i) => {
+        const pos = positions[char] || [i * 0.5 - 4, 2.5, 0]
+        return (
+          <Float key={i} speed={1.2} rotationIntensity={0.3} floatIntensity={0.2}>
+            <Text
+              position={pos}
+              fontSize={0.6}
+              color={randomColor()}
+              anchorX="center"
+              anchorY="middle"
+              font="/fonts/helvetiker_regular.typeface.json"
+              // fallback: use default font if not available
+            >
+              {char}
+            </Text>
+          </Float>
+        )
+      })}
+    </group>
+  )
+}
 
-  const settle = useCallback((committed: boolean) => {
-    const d = dirRef.current
-    if (!d) return
-    
-    const currentPage = page
-    const targetPage = committed ? currentPage + d : currentPage
-    const wrappedTarget = ((targetPage % total) + total) % total
-    
-    if (committed) {
-      completeFlip(d, wrappedTarget)
-    } else {
-      // Cancel the flip - go back
-      if (animationRef.current) {
-        animationRef.current.stop()
-        animationRef.current = null
+// --- Main Scene Component ---
+function BirthdaySceneContent({ isCelebrating, onCelebrationStart }: { isCelebrating: boolean, onCelebrationStart: () => void }) {
+  const [candlesLit, setCandlesLit] = useState(true)
+  const [blowProgress, setBlowProgress] = useState(0)
+  const [celebrationStarted, setCelebrationStarted] = useState(false)
+  const [balloonsActive, setBalloonsActive] = useState(false)
+  const [confettiActive, setConfettiActive] = useState(false)
+  const [textVisible, setTextVisible] = useState(false)
+  
+  const blowAnimRef = useRef<number | null>(null)
+
+  const handleBlow = () => {
+    if (!candlesLit || blowProgress > 0) return
+    // Start blow animation
+    let progress = 0
+    const step = 0.02
+    const interval = setInterval(() => {
+      progress += step
+      setBlowProgress(Math.min(progress, 1))
+      if (progress >= 1) {
+        clearInterval(interval)
+        setCandlesLit(false)
+        // Trigger celebration after a short delay
+        setTimeout(() => {
+          setCelebrationStarted(true)
+          setBalloonsActive(true)
+          setConfettiActive(true)
+          setTextVisible(true)
+          onCelebrationStart()
+        }, 300)
       }
-      
-      setIsFlipping(true)
-      const startRotation = d === 1 ? 0 : -180
-      
-      animationRef.current = animate(rotateY, startRotation, {
-        type: 'spring',
-        stiffness: 350,
-        damping: 32,
-        onComplete: () => {
-          dirRef.current = null
-          setDir(null)
-          rotateY.set(0)
-          setIsFlipping(false)
-          animationRef.current = null
-        },
-      })
-    }
-  }, [page, rotateY, total, completeFlip])
+    }, 30)
+    blowAnimRef.current = interval as unknown as number
+  }
 
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    if (isFlipping) return
-    
-    // Reset any stuck state
-    if (dirRef.current) {
-      dirRef.current = null
-      setDir(null)
-      rotateY.set(0)
-    }
-    
-    const target = e.target as HTMLElement
-    target.setPointerCapture(e.pointerId)
-    startX.current = e.clientX
-    setDragging(true)
-  }, [isFlipping, rotateY])
-
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragging || isFlipping) return
-    
-    const delta = e.clientX - startX.current
-
-    if (dirRef.current === null) {
-      if (Math.abs(delta) < 6) return
-      const d: Dir = delta < 0 ? 1 : -1
-      dirRef.current = d
-      setDir(d)
-      rotateY.set(d === 1 ? 0 : -180)
-    }
-
-    const d = dirRef.current
-    const raw = Math.min(Math.abs(delta), MAX_DRAG_PX) / MAX_DRAG_PX
-    const newRotation = d === 1 ? -180 * raw : -180 * (1 - raw)
-    rotateY.set(newRotation)
-  }, [dragging, isFlipping, rotateY])
-
-  const endDrag = useCallback((e: React.PointerEvent) => {
-    if (!dragging) return
-    setDragging(false)
-    
-    const target = e.target as HTMLElement
-    if (target.releasePointerCapture) {
-      target.releasePointerCapture(e.pointerId)
-    }
-    
-    const d = dirRef.current
-    if (!d) {
-      // Reset if no direction
-      rotateY.set(0)
-      return
-    }
-    
-    const current = rotateY.get()
-    const progress = d === 1 ? Math.abs(current) / 180 : 1 - Math.abs(current) / 180
-    settle(progress > COMMIT_RATIO)
-  }, [dragging, rotateY, settle])
-
-  const goToPage = useCallback((targetIndex: number) => {
-    if (isFlipping || dirRef.current) return
-    
-    const safeTarget = ((targetIndex % total) + total) % total
-    if (safeTarget === page) return
-    
-    const direction: Dir = safeTarget > page ? 1 : -1
-    completeFlip(direction, safeTarget)
-  }, [isFlipping, page, total, completeFlip])
-
-  const flapIndex = dir === 1 ? page : dir === -1 ? page - 1 : page
-  const underIndex = dir === 1 ? page + 1 : dir === -1 ? page : page
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' && !isFlipping && !dirRef.current) {
-        e.preventDefault()
-        const nextPage = ((page + 1) % total + total) % total
-        completeFlip(1, nextPage)
-      } else if (e.key === 'ArrowLeft' && !isFlipping && !dirRef.current) {
-        e.preventDefault()
-        const prevPage = ((page - 1) % total + total) % total
-        completeFlip(-1, prevPage)
-      }
-    }
-    
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [completeFlip, isFlipping, page, total])
-
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (animationRef.current) {
-        animationRef.current.stop()
-        animationRef.current = null
-      }
+      if (blowAnimRef.current) clearInterval(blowAnimRef.current)
     }
   }, [])
 
   return (
-    <section className="relative min-h-screen overflow-hidden bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 px-2 py-4 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20 md:px-3 md:py-8">
-      {/* Decorative background elements */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-pink-200/20 blur-3xl dark:bg-pink-500/10" />
-        <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-blue-200/20 blur-3xl dark:bg-blue-500/10" />
-        <div className="absolute top-1/2 left-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-200/10 blur-3xl dark:bg-purple-500/5" />
-      </div>
-
-      <div className="relative mx-auto flex max-w-4xl flex-col items-center gap-3 md:gap-5">
-        {/* Header - Reduced size */}
-        <div className="text-center">
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="mb-0.5 inline-block rounded-full bg-white/50 px-3 py-0.5 text-[10px] font-medium uppercase tracking-[0.3em] text-primary backdrop-blur-sm dark:bg-white/10 md:px-4 md:py-1 md:text-xs"
-          >
-            ✨ Scrapbook
-          </motion.div>
-          <motion.h2
-            initial={{ opacity: 0, y: -5 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-            className="text-balance font-serif text-xl font-semibold md:text-3xl lg:text-4xl"
-          >
-            A book of soft things
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            className="mt-0.5 text-[10px] text-muted-foreground md:mt-1 md:text-xs"
-          >
-            {isFlipping ? '📖 Turning page...' : '👆 Drag to flip or use arrow keys'}
-          </motion.p>
-        </div>
-
-        {/* Book - Reduced top/bottom space */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
-          ref={containerRef}
-          className="relative w-full max-w-2xl select-none"
-          style={{ perspective: '1800px' }}
-        >
-          {/* Page tabs - Smaller */}
-          <div className="absolute -top-2 left-0 right-0 z-30 flex justify-around px-3 md:-top-3 md:px-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-3 w-1 rounded-full border border-primary/30 bg-white/80 shadow-sm backdrop-blur-sm dark:bg-gray-800/80 md:h-4 md:w-1.5"
-                style={{ 
-                  transform: `rotate(${i % 2 === 0 ? '2deg' : '-2deg'})`,
-                }}
-              />
-            ))}
-          </div>
-
-          <div className="relative overflow-hidden rounded-xl bg-white/40 shadow-2xl backdrop-blur-sm dark:bg-gray-800/40 md:rounded-2xl">
-            <div className="relative" style={{ aspectRatio: '4 / 5' }}>
-              {/* Background page */}
-              <div className="absolute inset-0 h-full min-h-[300px] md:min-h-[380px]">
-                <PageContent index={dir ? underIndex : page} />
-              </div>
-
-              {/* Flipping page */}
-              {dir !== null && (
-                <motion.div
-                  className="absolute inset-0 z-20 h-full cursor-grab active:cursor-grabbing"
-                  style={{
-                    rotateY,
-                    transformOrigin: 'left center',
-                    transformStyle: 'preserve-3d',
-                    backfaceVisibility: 'hidden',
-                    WebkitBackfaceVisibility: 'hidden',
-                    boxShadow: 'inset 0 0 40px rgba(0,0,0,0.06)',
-                  }}
-                  onPointerDown={onPointerDown}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={endDrag}
-                  onPointerCancel={endDrag}
-                >
-                  <div className="h-full rounded-r-xl bg-white/90 dark:bg-gray-800/90 md:rounded-r-2xl">
-                    <PageContent index={flapIndex} isFlipping={true} />
-                  </div>
-                  
-                  {/* Crease shadow */}
-                  <motion.div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-black/30 to-transparent md:w-16"
-                    style={{ opacity: creaseShadow }}
-                  />
-                </motion.div>
-              )}
-
-              {/* Shadow overlay for lift effect */}
-              {dir !== null && (
-                <motion.div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 z-10 rounded-xl bg-black md:rounded-2xl"
-                  style={{ opacity: liftShadowOpacity }}
-                />
-              )}
-
-              {/* Drag overlay when not flipping */}
-              {dir === null && !isFlipping && (
-                <div
-                  className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing"
-                  onPointerDown={onPointerDown}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={endDrag}
-                  onPointerCancel={endDrag}
-                />
-              )}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Navigation dots - Smaller and tighter */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.4 }}
-          className="flex flex-wrap items-center justify-center gap-1 md:gap-1.5"
-        >
-          {memories.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => goToPage(i)}
-              aria-label={`Go to page ${i + 1}`}
-              aria-current={i === page ? 'page' : undefined}
-              className={`group relative h-1.5 w-1.5 rounded-full transition-all duration-300 md:h-2 md:w-2 ${
-                i === page 
-                  ? 'w-4 bg-primary shadow-lg shadow-primary/30 md:w-6' 
-                  : 'bg-primary/30 hover:bg-primary/60 hover:scale-110'
-              }`}
-              disabled={isFlipping}
-            >
-              <span className="absolute -top-5 left-1/2 -translate-x-1/2 scale-0 rounded bg-black/80 px-1 py-0.5 text-[8px] text-white opacity-0 transition-all group-hover:scale-100 group-hover:opacity-100 md:-top-6 md:px-1.5 md:py-0.5 md:text-[10px]">
-                {i + 1}
-              </span>
-            </button>
+    <>
+      <color attach="background" args={['#1a1a2e']} />
+      <Environment preset="sunset" background />
+      
+      {/* Decorated wall / background pattern */}
+      <Plane args={[20, 20]} position={[0, 0, -5]} rotation={[0, 0, 0]}>
+        <meshStandardMaterial color="#16213e" roughness={0.8} metalness={0.1} />
+      </Plane>
+      
+      {/* Spotlight for dramatic effect */}
+      <spotLight position={[0, 5, 5]} angle={0.5} penumbra={0.5} intensity={1} color="#ffd700" />
+      <ambientLight intensity={0.4} />
+      
+      {/* Cake */}
+      <Cake candlesLit={candlesLit} blowProgress={blowProgress} />
+      
+      {/* Balloons */}
+      {balloonsActive && (
+        <>
+          {Array.from({ length: NUM_BALLOONS }).map((_, i) => (
+            <Balloon key={`balloon-${i}`} index={i} startDelay={i * 0.1} />
           ))}
-        </motion.div>
+        </>
+      )}
+      
+      {/* Confetti */}
+      {confettiActive && (
+        <>
+          {Array.from({ length: NUM_CONFETTI }).map((_, i) => (
+            <Confetti key={`confetti-${i}`} startDelay={i * 0.02} />
+          ))}
+        </>
+      )}
+      
+      {/* Happy Birthday Text */}
+      {textVisible && <BirthdayText />}
+      
+      {/* Sparkles */}
+      {celebrationStarted && <Sparkles count={100} scale={10} size={0.1} speed={0.5} />}
+      
+      {/* Controls for interactivity */}
+      <OrbitControls
+        enablePan={false}
+        minDistance={3}
+        maxDistance={10}
+        autoRotate={!celebrationStarted}
+        autoRotateSpeed={0.5}
+      />
+    </>
+  )
+}
 
-        {/* Page indicator - Smaller */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.5 }}
-          className="text-center text-[10px] text-muted-foreground md:text-xs"
+// --- Wrapper Component with UI ---
+export function BirthdayScene() {
+  const [isCelebrating, setIsCelebrating] = useState(false)
+  const [blowDisabled, setBlowDisabled] = useState(false)
+
+  const handleCelebrationStart = () => {
+    setIsCelebrating(true)
+    setBlowDisabled(true)
+  }
+
+  return (
+    <div className="relative h-screen w-full overflow-hidden bg-black">
+      <Canvas camera={{ position: [0, 2, 5], fov: 50 }}>
+        <Suspense fallback={null}>
+          <BirthdaySceneContent
+            isCelebrating={isCelebrating}
+            onCelebrationStart={handleCelebrationStart}
+          />
+        </Suspense>
+      </Canvas>
+      
+      {/* Overlay UI */}
+      <div className="absolute bottom-10 left-0 right-0 flex justify-center">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            if (!blowDisabled) {
+              // Trigger blow via a global event or ref; we need to communicate with scene
+              // We'll use a custom event or ref. For simplicity, we'll use a state in scene? 
+              // We'll handle blow via a ref or callback.
+              // Since the scene is inside Canvas, we can use a state variable that we pass down.
+              // But we need to trigger the blow function inside the scene.
+              // We'll use a ref to call a function.
+            }
+          }}
+          className="rounded-full bg-gradient-to-r from-pink-500 to-yellow-500 px-8 py-3 text-lg font-bold text-white shadow-lg transition-all hover:shadow-xl disabled:opacity-50"
+          disabled={blowDisabled}
         >
-          <span className="font-medium text-primary">
-            {((page % total) + total) % total + 1}
-          </span>
-          {' / '}
-          {total}
-        </motion.div>
+          {isCelebrating ? '🎉 Happy Birthday! 🎉' : '🎂 Blow Candles'}
+        </motion.button>
       </div>
-    </section>
+      
+      {/* Instruction */}
+      {!isCelebrating && (
+        <div className="absolute top-4 left-0 right-0 text-center text-white/70 text-sm">
+          Click the button to blow out the candles
+        </div>
+      )}
+    </div>
   )
 }
