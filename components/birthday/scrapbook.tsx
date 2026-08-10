@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, Suspense } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Canvas, useFrame } from '@react-three/fiber'
 import {
   OrbitControls,
   Text,
@@ -27,7 +27,7 @@ const randomColor = () => {
 }
 
 // --- 3D Balloon Letter ---
-function BalloonLetter({ char, position, color, index }: any) {
+function BalloonLetter({ char, position, color }: any) {
   return (
     <Float
       speed={0.8 + Math.random() * 0.4}
@@ -85,7 +85,6 @@ function BirthdayBalloonText({ visible }: any) {
             char={char} 
             position={pos} 
             color={color}
-            index={i}
           />
         )
       })}
@@ -190,7 +189,7 @@ function RealisticCake({ candlesLit, blowProgress }: any) {
       {/* 2. Main Chocolate Cake Body */}
       <Cylinder args={[2.0, 2.05, 1.3, 64]} position={[0, 0.5, 0]}>
         <meshStandardMaterial 
-          color="#1b110b" // Deep dark chocolate
+          color="#1b110b" 
           roughness={0.9} 
           metalness={0.1} 
         />
@@ -199,7 +198,7 @@ function RealisticCake({ candlesLit, blowProgress }: any) {
       {/* 3. The Glossy Magenta Drip Frosting */}
       <Cylinder args={[2.02, 2.02, 0.3, 64]} position={[0, 1.05, 0]}>
         <MeshDistortMaterial
-          color="#aa0055" // Deep rich magenta/purple drip
+          color="#aa0055" 
           roughness={0.15}
           metalness={0.1}
           distort={0.25}
@@ -212,7 +211,7 @@ function RealisticCake({ candlesLit, blowProgress }: any) {
         <meshStandardMaterial color="#880044" roughness={0.2} />
       </Cylinder>
       
-      {/* 4. Swirl Piping / Frosting Dollops on Top (8 Swirls) */}
+      {/* 4. Swirl Piping / Frosting Dollops on Top */}
       {Array.from({ length: 8 }).map((_, i) => {
         const angle = (i / 8) * Math.PI * 2
         const x = Math.cos(angle) * 1.6
@@ -226,7 +225,7 @@ function RealisticCake({ candlesLit, blowProgress }: any) {
         )
       })}
       
-      {/* 5. The 8 Striped Birthday Candles aligned to the image */}
+      {/* 5. The 8 Striped Birthday Candles */}
       {Array.from({ length: 8 }).map((_, i) => {
         const angle = (i / 8) * Math.PI * 2
         const x = Math.cos(angle) * 1.6
@@ -255,129 +254,9 @@ function RealisticCake({ candlesLit, blowProgress }: any) {
     </group>
   )
 }
-      {/* Bottom Layer */}
-      <Cylinder args={[1.8, 2.0, 0.5, 32]} position={[0, 0.25, 0]}>
-        <meshStandardMaterial color="#F5D7B3" roughness={0.8} />
-      </Cylinder>
-      
-      {/* Bottom Frosting */}
-      <Cylinder args={[1.9, 1.8, 0.1, 32]} position={[0, 0.5, 0]}>
-        <MeshDistortMaterial
-          color="#FFF8F0"
-          roughness={0.3}
-          metalness={0.1}
-          distort={0.3}
-          speed={0.5}
-        />
-      </Cylinder>
-      
-      {/* Decorative piping bottom */}
-      <Cylinder args={[1.85, 1.95, 0.08, 32]} position={[0, 0.45, 0]}>
-        <meshStandardMaterial color="#FFE4D6" roughness={0.6} />
-      </Cylinder>
-      
-      {/* Middle Layer */}
-      <Cylinder args={[1.6, 1.8, 0.5, 32]} position={[0, 0.75, 0]}>
-        <meshStandardMaterial color="#E8C9A0" roughness={0.7} />
-      </Cylinder>
-      
-      {/* Middle Frosting */}
-      <Cylinder args={[1.7, 1.6, 0.1, 32]} position={[0, 1.0, 0]}>
-        <MeshDistortMaterial
-          color="#FFF8F0"
-          roughness={0.3}
-          metalness={0.1}
-          distort={0.3}
-          speed={0.5}
-        />
-      </Cylinder>
-      
-      {/* Top Layer */}
-      <Cylinder args={[1.4, 1.6, 0.5, 32]} position={[0, 1.25, 0]}>
-        <meshStandardMaterial color="#D4A574" roughness={0.7} />
-      </Cylinder>
-      
-      {/* Top Frosting */}
-      <Cylinder args={[1.5, 1.4, 0.12, 32]} position={[0, 1.5, 0]}>
-        <MeshDistortMaterial
-          color="#FFF8F0"
-          roughness={0.3}
-          metalness={0.1}
-          distort={0.4}
-          speed={0.6}
-        />
-      </Cylinder>
-      
-      {/* Top Piping */}
-      <Cylinder args={[1.45, 1.55, 0.08, 32]} position={[0, 1.45, 0]}>
-        <meshStandardMaterial color="#FFE4D6" roughness={0.6} />
-      </Cylinder>
-      
-      {/* Decorative dots on sides */}
-      {Array.from({ length: 16 }).map((_, i) => {
-        const angle = (i / 16) * Math.PI * 2
-        const x = Math.cos(angle) * 1.75
-        const z = Math.sin(angle) * 1.75
-        return (
-          <Sphere key={`dot-${i}`} args={[0.05, 8, 8]} position={[x, 0.25, z]}>
-            <meshStandardMaterial color="#FF6B6B" emissive="#FF6B6B" emissiveIntensity={0.2} />
-          </Sphere>
-        )
-      })}
-      
-      {/* Roses on top */}
-      {[[-0.6, 1.62, -0.6], [0.6, 1.62, -0.6], [0, 1.62, 0.7]].map((pos, i) => (
-        <group key={`rose-${i}`} position={[pos[0], pos[1], pos[2]]}>
-          <Sphere args={[0.08, 8, 8]}>
-            <meshStandardMaterial color="#FF6B6B" roughness={0.4} />
-          </Sphere>
-          <Sphere args={[0.06, 8, 8]} position={[0.05, 0.03, 0]}>
-            <meshStandardMaterial color="#FF4757" roughness={0.4} />
-          </Sphere>
-          <Sphere args={[0.06, 8, 8]} position={[-0.04, 0.03, 0]}>
-            <meshStandardMaterial color="#FF4757" roughness={0.4} />
-          </Sphere>
-        </group>
-      ))}
-      
-      {/* Candles */}
-      {[
-        [-0.5, 1.7, -0.3],
-        [0.5, 1.7, -0.3],
-        [0, 1.7, 0.4],
-        [-0.4, 1.7, 0.3],
-        [0.4, 1.7, 0.3],
-      ].map((pos, i) => (
-        <group key={`candle-${i}`} position={[pos[0], pos[1], pos[2]]}>
-          <Cylinder args={[0.04, 0.05, 0.35, 8]}>
-            <meshStandardMaterial 
-              color={['#FF6B6B', '#4ECDC4', '#FFEAA7', '#FF9FF3', '#45B7D1'][i]} 
-              emissive={['#FF6B6B', '#4ECDC4', '#FFEAA7', '#FF9FF3', '#45B7D1'][i]}
-              emissiveIntensity={0.1}
-              roughness={0.3}
-            />
-          </Cylinder>
-          
-          <Cylinder args={[0.045, 0.055, 0.03, 8]} position={[0, 0.1, 0]}>
-            <meshStandardMaterial color="#FFFFFF" roughness={0.5} />
-          </Cylinder>
-          <Cylinder args={[0.045, 0.055, 0.03, 8]} position={[0, 0.22, 0]}>
-            <meshStandardMaterial color="#FFFFFF" roughness={0.5} />
-          </Cylinder>
-          
-          <Flame
-            position={[0, 0.35, 0]}
-            isLit={candlesLit}
-            blowProgress={blowProgress}
-          />
-        </group>
-      ))}
-    </group>
-  )
-}
 
 // --- Floating Balloon ---
-function FloatingBalloon({ index, delay }: any) {
+function FloatingBalloon({ delay }: any) {
   const ref = useRef<THREE.Group>(null)
   const color = randomColor()
   const startX = (Math.random() - 0.5) * 12
@@ -523,19 +402,19 @@ function ScrapbookSceneContent() {
       
       <Environment preset="night" background={false} />
       
-      <ambientLight intensity={0.3} color="#404060" />
-      <directionalLight position={[5, 10, 5]} intensity={1} color="#ffd700" />
-      <directionalLight position={[-5, 5, -5]} intensity={0.5} color="#4466ff" />
-      <pointLight position={[0, 5, 2]} intensity={0.5} color="#ff6b6b" />
+      {/* Deep, rich cinematic lighting setup */}
+      <ambientLight intensity={0.05} color="#101020" />
+      <directionalLight position={[2, 5, 4]} intensity={2.5} color="#ffaa44" />
+      <directionalLight position={[-3, 4, -4]} intensity={3.0} color="#ff0088" />
       
-      <Stars radius={50} depth={50} count={2000} factor={4} saturation={0} fade speed={0.5} />
+      <Stars radius={40} depth={30} count={4000} factor={6} saturation={0.5} fade speed={0.3} />
       
       <RealisticCake candlesLit={candlesLit} blowProgress={blowProgress} />
       
       {balloonsActive && (
         <>
           {Array.from({ length: 25 }).map((_, i) => (
-            <FloatingBalloon key={`balloon-${i}`} index={i} delay={i * 0.15} />
+            <FloatingBalloon key={`balloon-${i}`} delay={i * 0.15} />
           ))}
         </>
       )}
@@ -606,20 +485,20 @@ export function Scrapbook() {
         </Suspense>
       </Canvas>
       
-      {/* Overlay UI */}
+      {/* Overlay UI featuring the Neon Magenta interactive button layout */}
       <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center gap-4">
         <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.98 }}
           onClick={handleBlowClick}
-          className={`rounded-full px-10 py-4 text-lg font-bold text-white shadow-2xl transition-all ${
+          className={`rounded-full px-12 py-4 text-xl font-extrabold uppercase tracking-wider text-white transition-all duration-300 ${
             isBlown
-              ? 'bg-gradient-to-r from-green-400 to-blue-500 cursor-default'
-              : 'bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 hover:shadow-xl'
+              ? 'bg-neutral-800 border border-neutral-700 opacity-50 cursor-default'
+              : 'bg-transparent border-2 border-[#ff00aa] shadow-[0_0_20px_#ff00aa,inset_0_0_10px_#ff00aa] hover:shadow-[0_0_35px_#ff00aa,inset_0_0_15px_#ff00aa]'
           }`}
           disabled={isBlown}
         >
-          {isBlown ? '🎉 Happy Birthday! 🎉' : '🎂 Blow the Candles! 🎂'}
+          {isBlown ? '🎉 Celebrations 🎉' : 'Blow the Candles'}
         </motion.button>
         
         {!isBlown && (
