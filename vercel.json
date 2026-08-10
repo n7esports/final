@@ -1,0 +1,7 @@
+{
+  "buildCommand": "pnpm run build",
+  "installCommand": "pnpm install",
+  "env": {
+    "NEXT_TELEMETRY_DISABLED": "1"
+  }
+}
