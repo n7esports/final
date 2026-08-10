@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import Flame from "./Flame"
 
 export default function Candle({ isOff }: { isOff: boolean }) {
