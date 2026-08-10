@@ -15,9 +15,9 @@ function PageContent({ index, isFlipping = false }: { index: number; isFlipping?
   const memory = memories[safeIndex]
   
   return (
-    <div className={`grid h-full touch-none gap-3 p-3 md:grid-cols-2 md:gap-5 md:p-6 ${isFlipping ? 'pointer-events-none' : ''}`}>
+    <div className={`grid h-full touch-none gap-2 p-2 md:grid-cols-2 md:gap-3 md:p-4 ${isFlipping ? 'pointer-events-none' : ''}`}>
       <div className="relative flex items-center justify-center">
-        <div className="relative aspect-[4/5] w-full max-w-sm overflow-hidden rounded-2xl border-2 border-white/20 shadow-xl">
+        <div className="relative aspect-[4/5] w-full max-w-xs overflow-hidden rounded-xl border border-white/20 shadow-lg md:max-w-sm md:rounded-2xl">
           <Image
             src={memory.src || '/placeholder.svg'}
             alt={memory.caption}
@@ -34,28 +34,28 @@ function PageContent({ index, isFlipping = false }: { index: number; isFlipping?
           }} />
           
           {/* Decorative stars on image */}
-          <div className="absolute top-4 right-4 text-yellow-300/30 text-2xl">✦</div>
-          <div className="absolute bottom-4 left-4 text-yellow-300/20 text-xl">✦</div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-yellow-300/10 text-6xl">✦</div>
+          <div className="absolute top-2 right-2 text-yellow-300/30 text-xl md:top-3 md:right-3 md:text-2xl">✦</div>
+          <div className="absolute bottom-2 left-2 text-yellow-300/20 text-base md:bottom-3 md:left-3 md:text-xl">✦</div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-yellow-300/10 text-4xl md:text-5xl">✦</div>
         </div>
       </div>
 
-      <div className="flex flex-col justify-center gap-2 px-1 md:gap-3 md:px-3">
+      <div className="flex flex-col justify-center gap-1 px-1 md:gap-2 md:px-2">
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary md:px-3 md:py-1 md:text-xs">
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[8px] font-medium uppercase tracking-wider text-primary md:px-2.5 md:py-0.5 md:text-[10px]">
             Page {safeIndex + 1} of {memories.length}
           </span>
           <div className="flex-1 border-t border-primary/10" />
         </div>
-        <h3 className="font-serif text-base font-semibold italic leading-tight text-primary md:text-2xl md:leading-snug">
+        <h3 className="font-serif text-sm font-semibold italic leading-tight text-primary md:text-xl md:leading-snug">
           {memory.caption}
         </h3>
         <div className="relative">
-          <span className="absolute -left-1 -top-3 text-2xl text-primary/20 md:-left-3 md:text-4xl">"</span>
-          <p className="font-serif text-sm italic leading-relaxed text-card-foreground/90 md:text-base md:leading-relaxed">
+          <span className="absolute -left-1 -top-2 text-xl text-primary/20 md:-left-2 md:-top-3 md:text-3xl">"</span>
+          <p className="font-serif text-xs italic leading-relaxed text-card-foreground/90 md:text-sm md:leading-relaxed">
             {memory.quote}
           </p>
-          <span className="absolute -bottom-4 right-0 text-2xl text-primary/20 md:-bottom-6 md:text-4xl">"</span>
+          <span className="absolute -bottom-3 right-0 text-xl text-primary/20 md:-bottom-4 md:text-3xl">"</span>
         </div>
       </div>
     </div>
@@ -73,7 +73,6 @@ export function Scrapbook() {
   const startX = useRef(0)
   const dirRef = useRef<Dir | null>(null)
   const animationRef = useRef<any>(null)
-  const targetPageRef = useRef<number | null>(null)
   
   const rotateY = useMotionValue(0)
 
@@ -91,30 +90,21 @@ export function Scrapbook() {
 
   const liftShadowOpacity = useTransform(liftShadow, (v) => v * 0.25)
 
-  const flipToPage = useCallback((targetPage: number, direction: Dir) => {
-    if (isFlipping) return
-    
-    // If already on target page, do nothing
-    if (targetPage === page) return
-    
-    setIsFlipping(true)
-    dirRef.current = direction
-    setDir(direction)
-    
-    // Set initial rotation based on direction
-    rotateY.set(direction === 1 ? 0 : -180)
-    
-    // Animate to complete flip
-    const targetRotation = direction === 1 ? -180 : 0
-    
+  const completeFlip = useCallback((direction: Dir, targetPage: number) => {
+    // Stop any ongoing animation
     if (animationRef.current) {
       animationRef.current.stop()
+      animationRef.current = null
     }
+
+    setIsFlipping(true)
+    
+    const targetRotation = direction === 1 ? -180 : 0
     
     animationRef.current = animate(rotateY, targetRotation, {
       type: 'spring',
-      stiffness: 300,
-      damping: 30,
+      stiffness: 350,
+      damping: 32,
       onComplete: () => {
         setPage(targetPage)
         dirRef.current = null
@@ -122,10 +112,9 @@ export function Scrapbook() {
         rotateY.set(0)
         setIsFlipping(false)
         animationRef.current = null
-        targetPageRef.current = null
       },
     })
-  }, [isFlipping, page, rotateY])
+  }, [rotateY])
 
   const settle = useCallback((committed: boolean) => {
     const d = dirRef.current
@@ -133,45 +122,24 @@ export function Scrapbook() {
     
     const currentPage = page
     const targetPage = committed ? currentPage + d : currentPage
-    
-    // Ensure target is within bounds
     const wrappedTarget = ((targetPage % total) + total) % total
     
     if (committed) {
-      // Complete the flip
-      const targetRotation = d === 1 ? -180 : 0
-      
+      completeFlip(d, wrappedTarget)
+    } else {
+      // Cancel the flip - go back
       if (animationRef.current) {
         animationRef.current.stop()
+        animationRef.current = null
       }
       
       setIsFlipping(true)
-      animationRef.current = animate(rotateY, targetRotation, {
-        type: 'spring',
-        stiffness: 300,
-        damping: 30,
-        onComplete: () => {
-          setPage(wrappedTarget)
-          dirRef.current = null
-          setDir(null)
-          rotateY.set(0)
-          setIsFlipping(false)
-          animationRef.current = null
-        },
-      })
-    } else {
-      // Cancel the flip - go back to start
       const startRotation = d === 1 ? 0 : -180
       
-      if (animationRef.current) {
-        animationRef.current.stop()
-      }
-      
-      setIsFlipping(true)
       animationRef.current = animate(rotateY, startRotation, {
         type: 'spring',
-        stiffness: 300,
-        damping: 30,
+        stiffness: 350,
+        damping: 32,
         onComplete: () => {
           dirRef.current = null
           setDir(null)
@@ -181,15 +149,23 @@ export function Scrapbook() {
         },
       })
     }
-  }, [page, rotateY, total])
+  }, [page, rotateY, total, completeFlip])
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     if (isFlipping) return
+    
+    // Reset any stuck state
+    if (dirRef.current) {
+      dirRef.current = null
+      setDir(null)
+      rotateY.set(0)
+    }
+    
     const target = e.target as HTMLElement
     target.setPointerCapture(e.pointerId)
     startX.current = e.clientX
     setDragging(true)
-  }, [isFlipping])
+  }, [isFlipping, rotateY])
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (!dragging || isFlipping) return
@@ -206,7 +182,8 @@ export function Scrapbook() {
 
     const d = dirRef.current
     const raw = Math.min(Math.abs(delta), MAX_DRAG_PX) / MAX_DRAG_PX
-    rotateY.set(d === 1 ? -180 * raw : -180 * (1 - raw))
+    const newRotation = d === 1 ? -180 * raw : -180 * (1 - raw)
+    rotateY.set(newRotation)
   }, [dragging, isFlipping, rotateY])
 
   const endDrag = useCallback((e: React.PointerEvent) => {
@@ -219,7 +196,11 @@ export function Scrapbook() {
     }
     
     const d = dirRef.current
-    if (!d) return
+    if (!d) {
+      // Reset if no direction
+      rotateY.set(0)
+      return
+    }
     
     const current = rotateY.get()
     const progress = d === 1 ? Math.abs(current) / 180 : 1 - Math.abs(current) / 180
@@ -227,54 +208,14 @@ export function Scrapbook() {
   }, [dragging, rotateY, settle])
 
   const goToPage = useCallback((targetIndex: number) => {
-    if (isFlipping) return
+    if (isFlipping || dirRef.current) return
     
     const safeTarget = ((targetIndex % total) + total) % total
     if (safeTarget === page) return
     
     const direction: Dir = safeTarget > page ? 1 : -1
-    flipToPage(safeTarget, direction)
-  }, [isFlipping, page, total, flipToPage])
-
-  // Handle multiple page flips for dot navigation
-  const goToPageWithMultipleFlips = useCallback((targetIndex: number) => {
-    if (isFlipping) return
-    
-    const safeTarget = ((targetIndex % total) + total) % total
-    if (safeTarget === page) return
-    
-    // Calculate the shortest path
-    let diff = safeTarget - page
-    if (Math.abs(diff) > total / 2) {
-      diff = diff > 0 ? diff - total : diff + total
-    }
-    
-    const direction: Dir = diff > 0 ? 1 : -1
-    const steps = Math.abs(diff)
-    
-    // If it's just one step, flip normally
-    if (steps === 1) {
-      flipToPage(safeTarget, direction)
-      return
-    }
-    
-    // For multiple steps, we need to flip through intermediate pages
-    // This creates a smooth multi-page flip animation
-    let currentStep = 0
-    const flipInterval = setInterval(() => {
-      currentStep++
-      const nextPage = ((page + (direction * currentStep)) % total + total) % total
-      
-      if (currentStep === steps) {
-        clearInterval(flipInterval)
-        // Final flip to target
-        flipToPage(safeTarget, direction)
-      } else {
-        // Intermediate flip - fast and without animation
-        setPage(nextPage)
-      }
-    }, 150) // Speed of multi-page flips
-  }, [isFlipping, page, total, flipToPage])
+    completeFlip(direction, safeTarget)
+  }, [isFlipping, page, total, completeFlip])
 
   const flapIndex = dir === 1 ? page : dir === -1 ? page - 1 : page
   const underIndex = dir === 1 ? page + 1 : dir === -1 ? page : page
@@ -282,23 +223,33 @@ export function Scrapbook() {
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' && !isFlipping) {
+      if (e.key === 'ArrowRight' && !isFlipping && !dirRef.current) {
         e.preventDefault()
         const nextPage = ((page + 1) % total + total) % total
-        flipToPage(nextPage, 1)
-      } else if (e.key === 'ArrowLeft' && !isFlipping) {
+        completeFlip(1, nextPage)
+      } else if (e.key === 'ArrowLeft' && !isFlipping && !dirRef.current) {
         e.preventDefault()
         const prevPage = ((page - 1) % total + total) % total
-        flipToPage(prevPage, -1)
+        completeFlip(-1, prevPage)
       }
     }
     
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [flipToPage, isFlipping, page, total])
+  }, [completeFlip, isFlipping, page, total])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        animationRef.current.stop()
+        animationRef.current = null
+      }
+    }
+  }, [])
 
   return (
-    <section className="relative min-h-screen overflow-hidden bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 px-3 py-8 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20 md:px-4 md:py-16">
+    <section className="relative min-h-screen overflow-hidden bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 px-2 py-4 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20 md:px-3 md:py-8">
       {/* Decorative background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-pink-200/20 blur-3xl dark:bg-pink-500/10" />
@@ -306,50 +257,50 @@ export function Scrapbook() {
         <div className="absolute top-1/2 left-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-200/10 blur-3xl dark:bg-purple-500/5" />
       </div>
 
-      <div className="relative mx-auto flex max-w-5xl flex-col items-center gap-6 md:gap-10">
-        {/* Header */}
+      <div className="relative mx-auto flex max-w-4xl flex-col items-center gap-3 md:gap-5">
+        {/* Header - Reduced size */}
         <div className="text-center">
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-1 inline-block rounded-full bg-white/50 px-4 py-1 text-xs font-medium uppercase tracking-[0.35em] text-primary backdrop-blur-sm dark:bg-white/10 md:px-6 md:py-2 md:text-sm"
+            transition={{ duration: 0.4 }}
+            className="mb-0.5 inline-block rounded-full bg-white/50 px-3 py-0.5 text-[10px] font-medium uppercase tracking-[0.3em] text-primary backdrop-blur-sm dark:bg-white/10 md:px-4 md:py-1 md:text-xs"
           >
             ✨ Scrapbook
           </motion.div>
           <motion.h2
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-balance font-serif text-2xl font-semibold md:text-4xl lg:text-5xl"
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="text-balance font-serif text-xl font-semibold md:text-3xl lg:text-4xl"
           >
             A book of soft things
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mt-1 text-xs text-muted-foreground md:mt-2 md:text-sm"
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="mt-0.5 text-[10px] text-muted-foreground md:mt-1 md:text-xs"
           >
             {isFlipping ? '📖 Turning page...' : '👆 Drag to flip or use arrow keys'}
           </motion.p>
         </div>
 
-        {/* Book */}
+        {/* Book - Reduced top/bottom space */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
           ref={containerRef}
-          className="relative w-full max-w-3xl select-none"
+          className="relative w-full max-w-2xl select-none"
           style={{ perspective: '1800px' }}
         >
-          {/* Page tabs */}
-          <div className="absolute -top-3 left-0 right-0 z-30 flex justify-around px-4 md:-top-4 md:px-8">
-            {Array.from({ length: 8 }).map((_, i) => (
+          {/* Page tabs - Smaller */}
+          <div className="absolute -top-2 left-0 right-0 z-30 flex justify-around px-3 md:-top-3 md:px-6">
+            {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="h-4 w-1.5 rounded-full border border-primary/30 bg-white/80 shadow-sm backdrop-blur-sm dark:bg-gray-800/80 md:h-5 md:w-2"
+                className="h-3 w-1 rounded-full border border-primary/30 bg-white/80 shadow-sm backdrop-blur-sm dark:bg-gray-800/80 md:h-4 md:w-1.5"
                 style={{ 
                   transform: `rotate(${i % 2 === 0 ? '2deg' : '-2deg'})`,
                 }}
@@ -357,10 +308,10 @@ export function Scrapbook() {
             ))}
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl bg-white/40 shadow-2xl backdrop-blur-sm dark:bg-gray-800/40 md:rounded-3xl">
+          <div className="relative overflow-hidden rounded-xl bg-white/40 shadow-2xl backdrop-blur-sm dark:bg-gray-800/40 md:rounded-2xl">
             <div className="relative" style={{ aspectRatio: '4 / 5' }}>
               {/* Background page */}
-              <div className="absolute inset-0 h-full min-h-[350px] md:min-h-[420px]">
+              <div className="absolute inset-0 h-full min-h-[300px] md:min-h-[380px]">
                 <PageContent index={dir ? underIndex : page} />
               </div>
 
@@ -374,21 +325,21 @@ export function Scrapbook() {
                     transformStyle: 'preserve-3d',
                     backfaceVisibility: 'hidden',
                     WebkitBackfaceVisibility: 'hidden',
-                    boxShadow: 'inset 0 0 60px rgba(0,0,0,0.08)',
+                    boxShadow: 'inset 0 0 40px rgba(0,0,0,0.06)',
                   }}
                   onPointerDown={onPointerDown}
                   onPointerMove={onPointerMove}
                   onPointerUp={endDrag}
                   onPointerCancel={endDrag}
                 >
-                  <div className="h-full rounded-r-2xl bg-white/90 dark:bg-gray-800/90 md:rounded-r-3xl">
+                  <div className="h-full rounded-r-xl bg-white/90 dark:bg-gray-800/90 md:rounded-r-2xl">
                     <PageContent index={flapIndex} isFlipping={true} />
                   </div>
                   
                   {/* Crease shadow */}
                   <motion.div
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-black/30 to-transparent md:w-24"
+                    className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-black/30 to-transparent md:w-16"
                     style={{ opacity: creaseShadow }}
                   />
                 </motion.div>
@@ -398,7 +349,7 @@ export function Scrapbook() {
               {dir !== null && (
                 <motion.div
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 z-10 rounded-2xl bg-black md:rounded-3xl"
+                  className="pointer-events-none absolute inset-0 z-10 rounded-xl bg-black md:rounded-2xl"
                   style={{ opacity: liftShadowOpacity }}
                 />
               )}
@@ -417,40 +368,40 @@ export function Scrapbook() {
           </div>
         </motion.div>
 
-        {/* Navigation dots */}
+        {/* Navigation dots - Smaller and tighter */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="flex flex-wrap items-center justify-center gap-1.5 md:gap-2"
+          transition={{ duration: 0.4, delay: 0.4 }}
+          className="flex flex-wrap items-center justify-center gap-1 md:gap-1.5"
         >
           {memories.map((_, i) => (
             <button
               key={i}
               type="button"
-              onClick={() => goToPageWithMultipleFlips(i)}
+              onClick={() => goToPage(i)}
               aria-label={`Go to page ${i + 1}`}
               aria-current={i === page ? 'page' : undefined}
-              className={`group relative h-2 w-2 rounded-full transition-all duration-300 md:h-2.5 md:w-2.5 ${
+              className={`group relative h-1.5 w-1.5 rounded-full transition-all duration-300 md:h-2 md:w-2 ${
                 i === page 
-                  ? 'w-6 bg-primary shadow-lg shadow-primary/30 md:w-8' 
+                  ? 'w-4 bg-primary shadow-lg shadow-primary/30 md:w-6' 
                   : 'bg-primary/30 hover:bg-primary/60 hover:scale-110'
               }`}
               disabled={isFlipping}
             >
-              <span className="absolute -top-7 left-1/2 -translate-x-1/2 scale-0 rounded bg-black/80 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition-all group-hover:scale-100 group-hover:opacity-100 md:-top-8 md:px-2 md:py-0.5 md:text-xs">
+              <span className="absolute -top-5 left-1/2 -translate-x-1/2 scale-0 rounded bg-black/80 px-1 py-0.5 text-[8px] text-white opacity-0 transition-all group-hover:scale-100 group-hover:opacity-100 md:-top-6 md:px-1.5 md:py-0.5 md:text-[10px]">
                 {i + 1}
               </span>
             </button>
           ))}
         </motion.div>
 
-        {/* Page indicator */}
+        {/* Page indicator - Smaller */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="text-center text-xs text-muted-foreground md:text-sm"
+          transition={{ duration: 0.4, delay: 0.5 }}
+          className="text-center text-[10px] text-muted-foreground md:text-xs"
         >
           <span className="font-medium text-primary">
             {((page % total) + total) % total + 1}
