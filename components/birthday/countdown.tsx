@@ -240,12 +240,14 @@ export function Countdown({ onComplete, targetDate }: { onComplete: () => void; 
               {/* SCENE 2: Countdown card (glass morphism + pulse) */}
               <motion.div
                 className="glass-strong glow-pulse rounded-3xl px-6 py-8 md:px-12 md:py-10 flex items-center gap-2 md:gap-4 flex-wrap justify-center"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.4, duration: 1, ease: 'easeOut' }}
+               initial={{ scale: 0.9, opacity: 0 }}
                 // SCENE 3: Last 10 seconds tension build (scale pulse + brightness)
-                animate={isLast10 ? { scale: [1, 1.05, 1] } : undefined}
-                transition={isLast10 ? { duration: 0.5, repeat: Infinity } : undefined}
+                animate={isLast10 ? { scale: [1, 1.05, 1], opacity: 1 } : { scale: 1, opacity: 1 }}
+                transition={
+                  isLast10
+                    ? { duration: 0.5, repeat: Infinity }
+                    : { delay: 0.4, duration: 1, ease: 'easeOut' }
+                }
               >
                 <FlipCard value={timeLeft.days} label="Days" />
                 <span className="pb-6 font-serif text-2xl text-muted-foreground/60">:</span>
