@@ -179,14 +179,82 @@ function Flame({ position, isLit, blowProgress }: any) {
 function RealisticCake({ candlesLit, blowProgress }: any) {
   return (
     <group position={[0, -1.5, 0]}>
-      {/* Cake Stand */}
-      <Cylinder args={[2.2, 2.0, 0.15, 32]} position={[0, -0.3, 0]}>
-        <meshStandardMaterial color="#D4A574" roughness={0.5} metalness={0.3} />
+      {/* 1. Cake Stand: Dark/Metallic base as seen in the image */}
+      <Cylinder args={[2.4, 2.4, 0.1, 64]} position={[0, -0.2, 0]}>
+        <meshStandardMaterial color="#1a1a1a" roughness={0.2} metalness={0.8} />
       </Cylinder>
-      <Cylinder args={[1.5, 1.8, 0.15, 32]} position={[0, -0.15, 0]}>
-        <meshStandardMaterial color="#C4956A" roughness={0.5} metalness={0.3} />
+      <Cylinder args={[2.5, 2.5, 0.05, 64]} position={[0, -0.25, 0]}>
+        <meshStandardMaterial color="#0d0d0d" roughness={0.4} metalness={0.2} />
       </Cylinder>
       
+      {/* 2. Main Chocolate Cake Body */}
+      <Cylinder args={[2.0, 2.05, 1.3, 64]} position={[0, 0.5, 0]}>
+        <meshStandardMaterial 
+          color="#1b110b" // Deep dark chocolate
+          roughness={0.9} 
+          metalness={0.1} 
+        />
+      </Cylinder>
+      
+      {/* 3. The Glossy Magenta Drip Frosting */}
+      <Cylinder args={[2.02, 2.02, 0.3, 64]} position={[0, 1.05, 0]}>
+        <MeshDistortMaterial
+          color="#aa0055" // Deep rich magenta/purple drip
+          roughness={0.15}
+          metalness={0.1}
+          distort={0.25}
+          speed={0} 
+        />
+      </Cylinder>
+      
+      {/* Top smooth icing cap */}
+      <Cylinder args={[2.01, 2.01, 0.05, 64]} position={[0, 1.16, 0]}>
+        <meshStandardMaterial color="#880044" roughness={0.2} />
+      </Cylinder>
+      
+      {/* 4. Swirl Piping / Frosting Dollops on Top (8 Swirls) */}
+      {Array.from({ length: 8 }).map((_, i) => {
+        const angle = (i / 8) * Math.PI * 2
+        const x = Math.cos(angle) * 1.6
+        const z = Math.sin(angle) * 1.6
+        return (
+          <group key={`piping-${i}`} position={[x, 1.18, z]}>
+            <Sphere args={[0.12, 16, 16]}>
+              <MeshDistortMaterial color="#bd006a" roughness={0.2} distort={0.3} speed={0} />
+            </Sphere>
+          </group>
+        )
+      })}
+      
+      {/* 5. The 8 Striped Birthday Candles aligned to the image */}
+      {Array.from({ length: 8 }).map((_, i) => {
+        const angle = (i / 8) * Math.PI * 2
+        const x = Math.cos(angle) * 1.6
+        const z = Math.sin(angle) * 1.6
+        return (
+          <group key={`candle-${i}`} position={[x, 1.25, z]} rotation={[0, -angle, 0]}>
+            <Cylinder args={[0.04, 0.04, 0.6, 16]}>
+              <meshStandardMaterial 
+                color={i % 2 === 0 ? "#ff3377" : "#e0a000"} 
+                roughness={0.3} 
+              />
+            </Cylinder>
+            
+            <Cylinder args={[0.005, 0.005, 0.08, 8]} position={[0, 0.33, 0]}>
+              <meshStandardMaterial color="#222" />
+            </Cylinder>
+            
+            <Flame
+              position={[0, 0.36, 0]}
+              isLit={candlesLit}
+              blowProgress={blowProgress}
+            />
+          </group>
+        )
+      })}
+    </group>
+  )
+}
       {/* Bottom Layer */}
       <Cylinder args={[1.8, 2.0, 0.5, 32]} position={[0, 0.25, 0]}>
         <meshStandardMaterial color="#F5D7B3" roughness={0.8} />
