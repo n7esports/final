@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useCandleState } from "./useCandleState"
 import Cake from "./Cake"
