@@ -77,6 +77,7 @@ export function Scrapbook() {
     return 0.15 + Math.sin(t * Math.PI) * 0.35
   })
 
+  const liftShadowOpacity = useTransform(liftShadow, (v) => v * 0.25)
   const settle = useCallback(
     (committed: boolean) => {
       const d = dirRef.current
@@ -209,7 +210,7 @@ export function Scrapbook() {
                 <motion.div
                   aria-hidden="true"
                   className="pointer-events-none absolute inset-0 z-10 bg-black"
-                  style={{ opacity: useTransform(liftShadow, (v) => v * 0.25) }}
+                   style={{ opacity: liftShadowOpacity }}
                 />
               )}
 
