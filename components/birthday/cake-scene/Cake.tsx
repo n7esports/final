@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import Candle from "./Candle"
 
 export default function Cake({ blown }: { blown: boolean }) {
