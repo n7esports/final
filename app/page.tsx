@@ -19,18 +19,12 @@ export default function BirthdayPage() {
   const toCelebration = useCallback(() => setPhase('celebration'), [])
   const toExperience = useCallback(() => setPhase('experience'), [])
 
-  // Set your birthday date here
-  // Format: new Date(YEAR, MONTH-1, DAY, HOUR, MINUTE, SECOND)
-  // Example for September 15, 2024 at midnight:
-  const BIRTHDAY_DATE = new Date(2024, 8, 15, 0, 0, 0) // September 15, 2024 00:00:00
-  
-  // If the date has already passed this year, set it to next year
-  if (BIRTHDAY_DATE.getTime() < Date.now()) {
+   // Target is September 15, computed fresh from the visitor's current date.
+  const now = new Date()
+  const BIRTHDAY_DATE = new Date(now.getFullYear(), 8, 15, 0, 0, 0, 0)
+  if (BIRTHDAY_DATE.getTime() < now.getTime()) {
     BIRTHDAY_DATE.setFullYear(BIRTHDAY_DATE.getFullYear() + 1)
   }
-
-  // Optional: You can also pass the date as a string
-  // const BIRTHDAY_DATE = new Date('2024-09-15T00:00:00')
 
   return (
     <main className="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-pink-100/60 via-background to-purple-100/50 dark:from-pink-950/30 dark:via-background dark:to-purple-950/30">
