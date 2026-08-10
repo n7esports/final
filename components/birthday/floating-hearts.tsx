@@ -37,20 +37,22 @@ export function FloatingHearts({ count = 14 }: { count?: number }) {
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
     >
       {hearts.map((heart, i) => (
-        <span
-          key={i}
-          className="absolute bottom-0 text-2xl will-change-transform"
-          style={
-            {
-              left: `${heart.left}%`,
-              animation: `float-up ${heart.duration}s linear ${heart.delay}s infinite`,
-              '--heart-scale': heart.scale,
-              '--heart-opacity': heart.opacity,
-              '--heart-drift': `${heart.drift}px`,
-              '--heart-rotate': `${heart.rotate}deg`,
-            } as React.CSSProperties
-          }
-        >
+       <span
+  key={i}
+  className="absolute bottom-0 text-2xl will-change-transform"
+  style={
+    {
+      left: `${heart.left}%`,
+      opacity: 0, // stay invisible until the animation's own fade-in takes over
+      animation: `float-up ${heart.duration}s linear ${heart.delay}s infinite`,
+      animationFillMode: 'backwards', // apply the 0% keyframe during the delay too
+      '--s': heart.scale,
+      '--o': heart.opacity,
+      '--d': `${heart.drift}px`,
+      '--r': `${heart.rotate}deg`,
+    } as React.CSSProperties
+  }
+>
           {heart.char}
         </span>
       ))}
