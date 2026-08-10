@@ -6,7 +6,7 @@ import { Countdown } from '@/components/birthday/countdown'
 import { Celebration } from '@/components/birthday/celebration'
 import { Hero } from '@/components/birthday/hero'
 import { PolaroidBoard } from '@/components/birthday/polaroid-board'
-import { Scrapbook } from '@/components/birthday/scrapbook'
+import { BirthdayScene } from '@/components/birthday/scrapbook'
 import { GalaxyGallery } from '@/components/birthday/galaxy-gallery'
 import { FloatingHearts } from '@/components/birthday/floating-hearts'
 import { ThemeToggle } from '@/components/birthday/theme-toggle'
@@ -19,7 +19,7 @@ export default function BirthdayPage() {
   const toCelebration = useCallback(() => setPhase('celebration'), [])
   const toExperience = useCallback(() => setPhase('experience'), [])
 
-   // Target is September 15, computed fresh from the visitor's current date.
+  // Target is September 15, computed fresh from the visitor's current date.
   const now = new Date()
   const BIRTHDAY_DATE = new Date(now.getFullYear(), 8, 15, 0, 0, 0, 0)
   if (BIRTHDAY_DATE.getTime() < now.getTime()) {
@@ -49,21 +49,49 @@ export default function BirthdayPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1 }}
+              className="space-y-20 md:space-y-32"
             >
               <Hero />
               <PolaroidBoard />
-              <Scrapbook />
+              
+              {/* Birthday Scene - Full height with reduced padding */}
+              <div className="relative -mx-4 md:-mx-8">
+                <BirthdayScene />
+              </div>
+              
               <GalaxyGallery />
 
               <footer className="flex flex-col items-center gap-3 px-4 pb-16 pt-8 text-center">
-                <p className="font-serif text-2xl italic text-primary md:text-3xl">
-                  Happy Birthday, Arfa
-                </p>
-                <p className="max-w-md text-pretty text-sm leading-relaxed text-muted-foreground">
+                <motion.p 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6 }}
+                  className="font-serif text-2xl italic text-primary md:text-3xl"
+                >
+                  Happy Birthday, Arfa ✨
+                </motion.p>
+                <motion.p 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  className="max-w-md text-pretty text-sm leading-relaxed text-muted-foreground md:text-base"
+                >
                   May this year be as soft, bright, and beautiful as you make
                   everything around you. September 15 will always be a little
-                  more magical because of you.
-                </p>
+                  more magical because of you. 🎂
+                </motion.p>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="mt-4 flex gap-2 text-2xl"
+                >
+                  <span>💖</span>
+                  <span>✨</span>
+                  <span>🎉</span>
+                  <span>🌟</span>
+                  <span>💝</span>
+                </motion.div>
               </footer>
             </motion.div>
           )}
