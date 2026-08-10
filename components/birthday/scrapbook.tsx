@@ -27,7 +27,7 @@ const randomColor = () => {
 }
 
 // --- 3D Balloon Letter ---
-function BalloonLetter({ char, position, color, index }: { char: string, position: [number, number, number], color: string, index: number }) {
+function BalloonLetter({ char, position, color, index }: any) {
   return (
     <Float
       speed={0.8 + Math.random() * 0.4}
@@ -40,14 +40,8 @@ function BalloonLetter({ char, position, color, index }: { char: string, positio
         color={color}
         anchorX="center"
         anchorY="middle"
-        font="/fonts/helvetiker_regular.typeface.json"
         outlineWidth={0.02}
         outlineColor="#ffffff"
-        bevelEnabled
-        bevelThickness={0.05}
-        bevelSize={0.02}
-        bevelOffset={0}
-        bevelSegments={4}
         material-toneMapped={false}
         emissive={color}
         emissiveIntensity={0.2}
@@ -59,16 +53,15 @@ function BalloonLetter({ char, position, color, index }: { char: string, positio
 }
 
 // --- Birthday Text with Balloon Letters ---
-function BirthdayBalloonText({ visible }: { visible: boolean }) {
+function BirthdayBalloonText({ visible }: any) {
   const text = "Happy Birthday!"
   const letters = text.split('')
   const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#FF9FF3', '#FF4757', '#2ED573', '#1E90FF', '#FF6348', '#DDA0DD', '#F368E0', '#FF6B6B']
   
-  const positions: { [key: string]: [number, number, number] } = {
+  const positions: any = {
     'H': [-4.5, 2.8, 0],
     'a': [-3.8, 2.8, 0],
     'p': [-3.1, 2.8, 0],
-    'p': [-2.4, 2.8, 0],
     'y': [-1.7, 2.8, 0],
     ' ': [-0.9, 2.8, 0],
     'B': [-0.1, 2.8, 0],
@@ -77,9 +70,6 @@ function BirthdayBalloonText({ visible }: { visible: boolean }) {
     't': [1.8, 2.8, 0],
     'h': [2.4, 2.8, 0],
     'd': [3.1, 2.8, 0],
-    'a': [3.8, 2.8, 0],
-    'y': [4.5, 2.8, 0],
-    '!': [5.2, 2.8, 0],
   }
 
   if (!visible) return null
@@ -104,7 +94,7 @@ function BirthdayBalloonText({ visible }: { visible: boolean }) {
 }
 
 // --- Realistic Flame ---
-function Flame({ position, isLit, blowProgress }: { position: [number, number, number], isLit: boolean, blowProgress: number }) {
+function Flame({ position, isLit, blowProgress }: any) {
   const flameRef = useRef<THREE.Mesh>(null)
   const glowRef = useRef<THREE.Mesh>(null)
   const [seed] = useState(() => Math.random() * 100)
@@ -115,7 +105,6 @@ function Flame({ position, isLit, blowProgress }: { position: [number, number, n
     const time = state.clock.elapsedTime + seed
     
     if (isLit && blowProgress < 1) {
-      // Realistic flame flicker
       const flicker = 0.85 + Math.sin(time * 12) * 0.08 + Math.sin(time * 8 + 1) * 0.05
       const swayX = Math.sin(time * 3 + position[0]) * 0.02
       const swayZ = Math.cos(time * 2.5 + position[2]) * 0.02
@@ -128,14 +117,12 @@ function Flame({ position, isLit, blowProgress }: { position: [number, number, n
       flameRef.current.position.x = position[0] + swayX
       flameRef.current.position.z = position[2] + swayZ
       
-      // Glow pulse
       glowRef.current.scale.set(
         1 + Math.sin(time * 5) * 0.1,
         1 + Math.sin(time * 4 + 1) * 0.1,
         1 + Math.sin(time * 5) * 0.1
       )
     } else {
-      // Extinguish animation
       const progress = Math.min(blowProgress, 1)
       const shrink = 1 - progress
       
@@ -158,7 +145,6 @@ function Flame({ position, isLit, blowProgress }: { position: [number, number, n
 
   return (
     <group position={position}>
-      {/* Flame inner core */}
       <mesh ref={flameRef} position={[0, 0.2, 0]}>
         <sphereGeometry args={[0.06, 8, 8]} />
         <meshStandardMaterial
@@ -170,7 +156,6 @@ function Flame({ position, isLit, blowProgress }: { position: [number, number, n
         />
       </mesh>
       
-      {/* Flame outer glow */}
       <mesh ref={glowRef} position={[0, 0.1, 0]}>
         <sphereGeometry args={[0.15, 8, 8]} />
         <meshBasicMaterial
@@ -180,7 +165,6 @@ function Flame({ position, isLit, blowProgress }: { position: [number, number, n
         />
       </mesh>
       
-      {/* Point light for realistic illumination */}
       <pointLight
         intensity={isLit ? 0.5 : 0.5 * (1 - blowProgress)}
         distance={1.5}
@@ -192,7 +176,7 @@ function Flame({ position, isLit, blowProgress }: { position: [number, number, n
 }
 
 // --- Realistic Cake ---
-function RealisticCake({ candlesLit, blowProgress }: { candlesLit: boolean, blowProgress: number }) {
+function RealisticCake({ candlesLit, blowProgress }: any) {
   return (
     <group position={[0, -1.5, 0]}>
       {/* Cake Stand */}
@@ -297,7 +281,6 @@ function RealisticCake({ candlesLit, blowProgress }: { candlesLit: boolean, blow
         [0.4, 1.7, 0.3],
       ].map((pos, i) => (
         <group key={`candle-${i}`} position={[pos[0], pos[1], pos[2]]}>
-          {/* Candle body */}
           <Cylinder args={[0.04, 0.05, 0.35, 8]}>
             <meshStandardMaterial 
               color={['#FF6B6B', '#4ECDC4', '#FFEAA7', '#FF9FF3', '#45B7D1'][i]} 
@@ -307,7 +290,6 @@ function RealisticCake({ candlesLit, blowProgress }: { candlesLit: boolean, blow
             />
           </Cylinder>
           
-          {/* Candle stripe */}
           <Cylinder args={[0.045, 0.055, 0.03, 8]} position={[0, 0.1, 0]}>
             <meshStandardMaterial color="#FFFFFF" roughness={0.5} />
           </Cylinder>
@@ -315,7 +297,6 @@ function RealisticCake({ candlesLit, blowProgress }: { candlesLit: boolean, blow
             <meshStandardMaterial color="#FFFFFF" roughness={0.5} />
           </Cylinder>
           
-          {/* Flame */}
           <Flame
             position={[0, 0.35, 0]}
             isLit={candlesLit}
@@ -328,7 +309,7 @@ function RealisticCake({ candlesLit, blowProgress }: { candlesLit: boolean, blow
 }
 
 // --- Floating Balloon ---
-function FloatingBalloon({ index, delay }: { index: number, delay: number }) {
+function FloatingBalloon({ index, delay }: any) {
   const ref = useRef<THREE.Group>(null)
   const color = randomColor()
   const startX = (Math.random() - 0.5) * 12
@@ -354,7 +335,6 @@ function FloatingBalloon({ index, delay }: { index: number, delay: number }) {
   return (
     <group ref={ref} position={[startX, startY, startZ]}>
       <Float speed={1} rotationIntensity={0.1} floatIntensity={0.1}>
-        {/* Balloon body */}
         <Sphere args={[size, 16, 16]} position={[0, 0, 0]}>
           <meshStandardMaterial 
             color={color} 
@@ -366,16 +346,13 @@ function FloatingBalloon({ index, delay }: { index: number, delay: number }) {
             opacity={0.9}
           />
         </Sphere>
-        {/* Balloon highlight */}
         <Sphere args={[size * 0.3, 8, 8]} position={[size * 0.3, size * 0.3, size * 0.3]}>
           <meshBasicMaterial color="#FFFFFF" transparent opacity={0.3} />
         </Sphere>
-        {/* Knot */}
         <mesh position={[0, -size * 0.9, 0]}>
           <coneGeometry args={[size * 0.2, size * 0.3, 8]} />
           <meshStandardMaterial color={color} />
         </mesh>
-        {/* String */}
         <mesh position={[0, -size * 1.2, 0]}>
           <cylinderGeometry args={[0.005, 0.005, size * 0.8, 4]} />
           <meshStandardMaterial color="#999" transparent opacity={0.5} />
@@ -386,7 +363,7 @@ function FloatingBalloon({ index, delay }: { index: number, delay: number }) {
 }
 
 // --- Confetti Particle ---
-function ConfettiParticle({ delay }: { delay: number }) {
+function ConfettiParticle({ delay }: any) {
   const ref = useRef<THREE.Mesh>(null)
   const color = randomColor()
   const startX = (Math.random() - 0.5) * 15
@@ -426,7 +403,7 @@ function ConfettiParticle({ delay }: { delay: number }) {
 }
 
 // --- Main Scene ---
-function BirthdaySceneContent() {
+function ScrapbookSceneContent() {
   const [candlesLit, setCandlesLit] = useState(true)
   const [blowProgress, setBlowProgress] = useState(0)
   const [celebrating, setCelebrating] = useState(false)
@@ -465,20 +442,17 @@ function BirthdaySceneContent() {
     }
   }, [])
 
-  // Expose handleBlow to parent
   useEffect(() => {
     (window as any).blowCandles = handleBlow
     return () => {
-      delete (window).blowCandles
+      delete (window as any).blowCandles
     }
   }, [handleBlow])
 
   return (
     <>
-      {/* Background gradient */}
       <color attach="background" args={['#0a0a1a']} />
       
-      {/* Environment and Lighting */}
       <Environment preset="night" background={false} />
       
       <ambientLight intensity={0.3} color="#404060" />
@@ -486,13 +460,10 @@ function BirthdaySceneContent() {
       <directionalLight position={[-5, 5, -5]} intensity={0.5} color="#4466ff" />
       <pointLight position={[0, 5, 2]} intensity={0.5} color="#ff6b6b" />
       
-      {/* Stars background */}
       <Stars radius={50} depth={50} count={2000} factor={4} saturation={0} fade speed={0.5} />
       
-      {/* Cake */}
       <RealisticCake candlesLit={candlesLit} blowProgress={blowProgress} />
       
-      {/* Balloons */}
       {balloonsActive && (
         <>
           {Array.from({ length: 25 }).map((_, i) => (
@@ -501,7 +472,6 @@ function BirthdaySceneContent() {
         </>
       )}
       
-      {/* Confetti */}
       {confettiActive && (
         <>
           {Array.from({ length: 150 }).map((_, i) => (
@@ -510,10 +480,8 @@ function BirthdaySceneContent() {
         </>
       )}
       
-      {/* Birthday Text */}
       <BirthdayBalloonText visible={textVisible} />
       
-      {/* Sparkles */}
       {celebrating && (
         <Sparkles 
           count={150} 
@@ -525,7 +493,6 @@ function BirthdaySceneContent() {
         />
       )}
       
-      {/* Controls */}
       <OrbitControls
         enablePan={false}
         minDistance={3}
@@ -538,15 +505,14 @@ function BirthdaySceneContent() {
   )
 }
 
-// --- Wrapper Component ---
-export function BirthdayScene() {
+// --- Main Export ---
+export function Scrapbook() {
   const [isCelebrating, setIsCelebrating] = useState(false)
   const [isBlown, setIsBlown] = useState(false)
 
   const handleBlowClick = () => {
     if (isBlown) return
     setIsBlown(true)
-    // Trigger the blow function in the scene
     if (typeof window !== 'undefined' && (window as any).blowCandles) {
       ;(window as any).blowCandles()
     }
@@ -557,7 +523,6 @@ export function BirthdayScene() {
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-[#0a0a1a]">
-      {/* Canvas */}
       <Canvas
         camera={{ position: [0, 1.5, 6], fov: 45 }}
         gl={{ 
@@ -569,7 +534,7 @@ export function BirthdayScene() {
         dpr={[1, 2]}
       >
         <Suspense fallback={null}>
-          <BirthdaySceneContent />
+          <ScrapbookSceneContent />
         </Suspense>
       </Canvas>
       
@@ -649,4 +614,4 @@ export function BirthdayScene() {
   )
 }
 
-export default BirthdayScene
+export default Scrapbook
