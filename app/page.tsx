@@ -10,6 +10,11 @@ import { BirthdayScene } from '@/components/birthday/scrapbook'
 import { GalaxyGallery } from '@/components/birthday/galaxy-gallery'
 import { FloatingHearts } from '@/components/birthday/floating-hearts'
 import { ThemeToggle } from '@/components/birthday/theme-toggle'
+import CakeScene from "@/components/birthday/cake-scene/CakeScene"
+
+export default function Home() {
+  return <CakeScene />
+}
 
 type Phase = 'countdown' | 'celebration' | 'experience'
 
