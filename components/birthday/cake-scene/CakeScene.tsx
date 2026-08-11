@@ -1,26 +1,39 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useCandleState } from './useCandleState'
-import Cake from './Cake'
+import { Canvas } from '@react-three/fiber'
+import { OrbitControls, useGLTF, Environment, PerspectiveCamera } from '@react-three/drei'
 import BalloonSystem from './BalloonSystem'
 import ConfettiSystem from './ConfettiSystem'
 import BackgroundDecor from './BackgroundDecor'
 import { Moon, Sun, Volume2, VolumeX } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
+// 3D Cake Component
+function Cake3D({ blown, isDarkTheme }: { blown: boolean; isDarkTheme: boolean }) {
+  const { scene } = useGLTF('/models/cake.glb')
+  
+  useEffect(() => {
+    // Scale and position the model
+    scene.scale.set(1.5, 1.5, 1.5)
+    scene.position.set(0, -0.5, 0)
+  }, [scene])
+
+  return <primitive object={scene} />
+}
+
 export default function CakeScene() {
-  const { blown, blowCandles } = useCandleState()
+  const [blown, setBlown] = useState(false)
   const [showWishModal, setShowWishModal] = useState(false)
   const [wish, setWish] = useState('')
   const [wishMade, setWishMade] = useState(false)
   const [isDarkTheme, setIsDarkTheme] = useState(true)
   const [isMusicPlaying, setIsMusicPlaying] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  // Initialize audio on component mount
+  // Initialize audio
   useEffect(() => {
-    // Use a royalty-free birthday song
     const audioElement = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3')
     audioElement.volume = 0.3
     audioElement.loop = true
@@ -34,14 +47,18 @@ export default function CakeScene() {
     }
   }, [])
 
-  // Auto-play music when candles are blown
+  // Play music when candles are blown
   useEffect(() => {
     if (blown && audioRef.current && !isMusicPlaying) {
       audioRef.current.currentTime = 0
-      audioRef.current.play().catch((error) => {
-        console.log('Audio playback failed - user interaction required:', error)
-      })
-      setIsMusicPlaying(true)
+      audioRef.current.play()
+        .then(() => {
+          setIsMusicPlaying(true)
+          setShowCelebration(true)
+        })
+        .catch((error) => {
+          console.log('Audio playback failed:', error)
+        })
     }
   }, [blown, isMusicPlaying])
 
@@ -53,11 +70,11 @@ export default function CakeScene() {
     if (wish.trim()) {
       setWishMade(true)
       setShowWishModal(false)
-      // Auto-blow candles after wish is made
-      setTimeout(() => {
-        blowCandles()
-      }, 500)
     }
+  }
+
+  const handleBlowCandles = () => {
+    setBlown(true)
   }
 
   const toggleTheme = () => {
@@ -119,32 +136,70 @@ export default function CakeScene() {
         {isMusicPlaying ? <Volume2 size={20} /> : <VolumeX size={20} />}
       </motion.button>
 
-      {/* 3D Embedded Cake from Sketchfab */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="w-full max-w-2xl h-64 md:h-96 rounded-xl overflow-hidden shadow-2xl mb-6"
-      >
-        <iframe
-          title="Chocolate Shaved Buttercream Cake"
-          frameBorder="0"
-          allowFullScreen
-          mozAllowFullScreen={true}
-          webkitAllowFullScreen={true}
-          allow="autoplay; fullscreen; xr-spatial-tracking"
-          xr-spatial-tracking="true"
-          src="https://sketchfab.com/models/6862f1f170b94eff935dde5f1d4c3bef/embed"
-          style={{
-            width: '100%',
-            height: '100%',
-            border: isDarkTheme ? '2px solid rgba(255,255,255,0.1)' : '2px solid rgba(0,0,0,0.1)',
-          }}
-        />
-      </motion.div>
+      {/* 3D Cake Canvas */}
+      <div className="w-full max-w-4xl h-80 md:h-[500px] rounded-2xl overflow-hidden shadow-2xl mb-4 relative">
+        <Canvas
+          camera={{ position: [0, 2, 5], fov: 45 }}
+          style={{ background: 'transparent' }}
+        >
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[5, 10, 5]} intensity={1.2} />
+          <directionalLight position={[-5, 5, 5]} intensity={0.5} />
+          <spotLight position={[0, 5, 0]} intensity={0.8} />
+          
+          <Cake3D blown={blown} isDarkTheme={isDarkTheme} />
+          
+          <OrbitControls
+            enableZoom={true}
+            enablePan={false}
+            autoRotate={!blown}
+            autoRotateSpeed={2}
+            minPolarAngle={0.3}
+            maxPolarAngle={1.5}
+          />
+          
+          <Environment preset="studio" />
+        </Canvas>
 
-      {/* Main Cake Display */}
-      <Cake blown={blown} isDarkTheme={isDarkTheme} />
+        {/* Overlay message when blown */}
+        {blown && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          >
+            <div className="bg-black/50 backdrop-blur-sm p-6 rounded-2xl text-center max-w-md">
+              <h3 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-300">
+                🎉 Happy Birthday! 🎉
+              </h3>
+              {wish && (
+                <p className="text-white/90 mt-2 italic">
+                  💫 {wish}
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Status Text */}
+      <div className="text-center mb-4">
+        {!wishMade && !blown && (
+          <p className={`text-sm ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`}>
+            ✨ Make a wish to start the celebration!
+          </p>
+        )}
+        {wishMade && !blown && (
+          <p className={`text-sm ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`}>
+            🕯️ Now blow the candles!
+          </p>
+        )}
+        {blown && (
+          <p className={`text-sm ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>
+            🎶 Happy Birthday! Enjoy the celebration! 🎶
+          </p>
+        )}
+      </div>
 
       {/* Wish Modal */}
       <AnimatePresence>
@@ -226,7 +281,7 @@ export default function CakeScene() {
       </AnimatePresence>
 
       {/* Action Buttons */}
-      <div className="flex gap-4 mt-6 flex-wrap justify-center">
+      <div className="flex gap-4 mt-2 flex-wrap justify-center">
         {!wishMade && !blown && (
           <motion.button
             onClick={handleMakeWish}
@@ -244,7 +299,7 @@ export default function CakeScene() {
 
         {wishMade && !blown && (
           <motion.button
-            onClick={blowCandles}
+            onClick={handleBlowCandles}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className={`px-6 md:px-8 py-3 md:py-4 rounded-full text-base md:text-lg font-semibold transition-all shadow-lg text-white ${
@@ -258,31 +313,7 @@ export default function CakeScene() {
         )}
       </div>
 
-      {/* Celebration Message */}
-      {blown && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-6 text-center"
-        >
-          <h3
-            className={`text-xl md:text-2xl font-bold ${
-              isDarkTheme
-                ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-300'
-                : 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 via-pink-500 to-purple-500'
-            }`}
-          >
-            🎉 Happy Birthday, Arfa! 🎉
-          </h3>
-          {wish && (
-            <p className={`text-sm md:text-base mt-2 italic ${isDarkTheme ? 'text-gray-300' : 'text-slate-600'}`}>
-              💫 {wish}
-            </p>
-          )}
-        </motion.div>
-      )}
-
-      {/* Balloons and Confetti */}
+      {/* Balloons and Confetti (shown when blown) */}
       <BalloonSystem show={blown} isDarkTheme={isDarkTheme} />
       <ConfettiSystem show={blown} />
     </div>
