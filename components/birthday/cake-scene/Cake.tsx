@@ -16,7 +16,10 @@ export default function CakeScene() {
   const [wishMade, setWishMade] = useState(false)
   const [isDarkTheme, setIsDarkTheme] = useState(true)
   const [isMusicPlaying, setIsMusicPlaying] = useState(false)
+  const [modelError, setModelError] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   // Initialize audio on component mount
   useEffect(() => {
@@ -25,11 +28,17 @@ export default function CakeScene() {
     audioElement.loop = true
     audioRef.current = audioElement
 
+    // Set loading timeout
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 5000)
+
     return () => {
       if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current = null
       }
+      clearTimeout(timer)
     }
   }, [])
 
@@ -38,7 +47,7 @@ export default function CakeScene() {
     if (blown && audioRef.current && !isMusicPlaying) {
       audioRef.current.currentTime = 0
       audioRef.current.play().catch((error) => {
-        console.log('Audio playback failed - user interaction required:', error)
+        console.log('Audio playback failed:', error)
       })
       setIsMusicPlaying(true)
     }
@@ -75,6 +84,11 @@ export default function CakeScene() {
           })
       }
     }
+  }
+
+  const handleIframeError = () => {
+    setModelError(true)
+    setIsLoading(false)
   }
 
   return (
@@ -117,33 +131,62 @@ export default function CakeScene() {
         {isMusicPlaying ? <Volume2 size={20} /> : <VolumeX size={20} />}
       </motion.button>
 
-      {/* 3D Embedded Cake from Sketchfab - Transparent Background */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="w-full max-w-3xl h-80 md:h-[450px] rounded-xl overflow-hidden shadow-2xl mb-6 relative"
-      >
-        <iframe
-          title="Birthday Cake 3D Model"
-          frameBorder="0"
-          allowFullScreen
-          mozAllowFullScreen={true}
-          webkitAllowFullScreen={true}
-          allow="autoplay; fullscreen; xr-spatial-tracking"
-          xr-spatial-tracking="true"
-          execution-while-out-of-viewport="true"
-          execution-while-not-rendered="true"
-          web-share="true"
-          src="https://sketchfab.com/models/68b2ac53d5e142d190e2470f51f0b73f/embed?autostart=1&transparent=1&ui_theme=dark&preload=1"
-          style={{
-            width: '100%',
-            height: '100%',
-            background: 'transparent',
-          }}
-        />
-        
-        {/* Subtle gradient overlay to blend with theme */}
+      {/* 3D Embedded Cake - With Error Handling */}
+      <div className="w-full max-w-3xl h-80 md:h-[450px] rounded-xl overflow-hidden shadow-2xl mb-6 relative">
+        {isLoading && (
+          <div className={`absolute inset-0 flex items-center justify-center z-10 ${
+            isDarkTheme ? 'bg-slate-800/80' : 'bg-gray-100/80'
+          }`}>
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+              <p className={`text-sm ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
+                Loading 3D Cake...
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!modelError ? (
+          <iframe
+            ref={iframeRef}
+            title="Birthday Cake 3D Model"
+            frameBorder="0"
+            allowFullScreen
+            mozAllowFullScreen={true}
+            webkitAllowFullScreen={true}
+            allow="autoplay; fullscreen; xr-spatial-tracking"
+            xr-spatial-tracking="true"
+            src="https://sketchfab.com/models/68b2ac53d5e142d190e2470f51f0b73f/embed?autostart=1&transparent=1&ui_theme=dark&preload=1"
+            style={{
+              width: '100%',
+              height: '100%',
+              background: 'transparent',
+            }}
+            onLoad={() => setIsLoading(false)}
+            onError={handleIframeError}
+          />
+        ) : (
+          // Fallback: Static cake image or 2D cake
+          <div className={`w-full h-full flex items-center justify-center ${
+            isDarkTheme ? 'bg-slate-800' : 'bg-pink-50'
+          }`}>
+            <div className="text-center p-4">
+              <div className="text-8xl mb-4">🎂</div>
+              <h3 className={`text-xl font-bold ${isDarkTheme ? 'text-white' : 'text-slate-900'}`}>
+                Happy Birthday!
+              </h3>
+              <p className={`text-sm mt-2 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
+                🎉 Make a wish and celebrate! 🎉
+              </p>
+              {/* Show 2D cake as fallback */}
+              <div className="mt-4">
+                <Cake blown={blown} isDarkTheme={isDarkTheme} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Subtle gradient overlay */}
         <div 
           className={`absolute inset-0 pointer-events-none ${
             isDarkTheme 
@@ -151,10 +194,10 @@ export default function CakeScene() {
               : 'bg-gradient-to-t from-blue-50/30 via-transparent to-pink-50/20'
           }`}
         />
-      </motion.div>
+      </div>
 
-      {/* Cake Details (optional - can remove if using only 3D model) */}
-      <Cake blown={blown} isDarkTheme={isDarkTheme} />
+      {/* Only show 2D cake if 3D model loads successfully, otherwise it's already shown as fallback */}
+      {!modelError && <Cake blown={blown} isDarkTheme={isDarkTheme} />}
 
       {/* Wish Modal */}
       <AnimatePresence>
