@@ -1,126 +1,300 @@
-"use client";
+'use client'
 
-import Candle from "./Candle"
-import { motion } from "framer-motion"
+import { useState, useEffect, useRef } from 'react'
+import { useCandleState } from './useCandleState'
+import Cake from './Cake'
+import BalloonSystem from './BalloonSystem'
+import ConfettiSystem from './ConfettiSystem'
+import BackgroundDecor from './BackgroundDecor'
+import { Moon, Sun, Volume2, VolumeX } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
-interface CakeProps {
-  blown: boolean
-  isDarkTheme?: boolean
-}
+export default function CakeScene() {
+  const { blown, blowCandles } = useCandleState()
+  const [showWishModal, setShowWishModal] = useState(false)
+  const [wish, setWish] = useState('')
+  const [wishMade, setWishMade] = useState(false)
+  const [isDarkTheme, setIsDarkTheme] = useState(true)
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
-export default function Cake({ blown, isDarkTheme = true }: CakeProps) {
-  const candles = new Array(8).fill(0)
+  // Initialize audio on component mount
+  useEffect(() => {
+    const audioElement = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3')
+    audioElement.volume = 0.3
+    audioElement.loop = true
+    audioRef.current = audioElement
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+    }
+  }, [])
+
+  // Auto-play music when candles are blown
+  useEffect(() => {
+    if (blown && audioRef.current && !isMusicPlaying) {
+      audioRef.current.currentTime = 0
+      audioRef.current.play().catch((error) => {
+        console.log('Audio playback failed - user interaction required:', error)
+      })
+      setIsMusicPlaying(true)
+    }
+  }, [blown, isMusicPlaying])
+
+  const handleMakeWish = () => {
+    setShowWishModal(true)
+  }
+
+  const handleConfirmWish = () => {
+    if (wish.trim()) {
+      setWishMade(true)
+      setShowWishModal(false)
+      setTimeout(() => {
+        blowCandles()
+      }, 500)
+    }
+  }
+
+  const toggleTheme = () => {
+    setIsDarkTheme(!isDarkTheme)
+  }
+
+  const toggleMusic = () => {
+    if (audioRef.current) {
+      if (isMusicPlaying) {
+        audioRef.current.pause()
+        setIsMusicPlaying(false)
+      } else {
+        audioRef.current.play()
+          .then(() => setIsMusicPlaying(true))
+          .catch((error) => {
+            console.log('Music playback failed:', error)
+          })
+      }
+    }
+  }
 
   return (
-    <motion.div 
-      className="relative flex flex-col items-center"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
+    <div
+      className={`relative min-h-[600px] flex flex-col items-center justify-center overflow-hidden transition-colors duration-300 p-4 ${
+        isDarkTheme
+          ? 'bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 text-white'
+          : 'bg-gradient-to-b from-blue-50 via-pink-50 to-blue-50 text-slate-900'
+      }`}
     >
-      {/* Candles */}
-      <div className="flex gap-2 md:gap-3 mb-2 z-10">
-        {candles.map((_, i) => (
-          <Candle key={i} isOff={blown} />
-        ))}
-      </div>
+      <BackgroundDecor isDarkTheme={isDarkTheme} />
 
-      {/* Cake Body */}
-      <motion.div 
-        className="relative"
-        whileHover={{ scale: 1.02 }}
-        transition={{ type: "spring", stiffness: 300 }}
+      {/* Theme Toggle Button */}
+      <motion.button
+        onClick={toggleTheme}
+        className={`absolute top-4 right-20 p-3 rounded-full transition-colors z-20 ${
+          isDarkTheme
+            ? 'bg-white/10 hover:bg-white/20 text-yellow-300'
+            : 'bg-slate-900/10 hover:bg-slate-900/20 text-slate-900'
+        }`}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        aria-label="Toggle theme"
       >
-        {/* Main Cake */}
-        <div className="w-72 md:w-96 h-36 md:h-44 rounded-xl relative shadow-2xl">
-          {/* Gradient layers */}
-          <div className="absolute inset-0 rounded-xl bg-gradient-to-b from-pink-400 via-pink-500 to-purple-700 overflow-hidden">
-            {/* Top frosting layer */}
-            <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-pink-300/80 to-pink-400/80 rounded-t-xl" />
-            
-            {/* Bottom layer shadow */}
-            <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-purple-900/50 to-transparent rounded-b-xl" />
-          </div>
+        {isDarkTheme ? <Sun size={20} /> : <Moon size={20} />}
+      </motion.button>
 
-          {/* Cake details - icing drips */}
-          <div className="absolute top-6 left-0 right-0 h-2">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div
-                key={`drip-${i}`}
-                className="absolute w-3 h-4 bg-pink-300/60 rounded-full"
-                style={{
-                  left: `${i * 9 + 5}%`,
-                  top: '0',
-                  transform: 'rotate(5deg)',
-                }}
-              />
-            ))}
-          </div>
+      {/* Music Toggle Button */}
+      <motion.button
+        onClick={toggleMusic}
+        className={`absolute top-4 right-4 p-3 rounded-full transition-colors z-20 ${
+          isDarkTheme
+            ? 'bg-white/10 hover:bg-white/20 text-pink-400'
+            : 'bg-slate-900/10 hover:bg-slate-900/20 text-pink-500'
+        }`}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        aria-label="Toggle music"
+      >
+        {isMusicPlaying ? <Volume2 size={20} /> : <VolumeX size={20} />}
+      </motion.button>
 
-          {/* Decorative piping on top */}
-          <div className="absolute top-6 left-0 right-0 h-2 flex justify-around">
-            {Array.from({ length: 16 }).map((_, i) => (
-              <div
-                key={`pip-${i}`}
-                className="w-1 h-3 bg-pink-200/50 rounded-full"
-                style={{
-                  transform: `rotate(${i % 2 === 0 ? '10deg' : '-10deg'})`,
-                  marginTop: '-2px',
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Side decorations - sprinkles */}
-          <div className="absolute inset-0 pointer-events-none">
-            {Array.from({ length: 30 }).map((_, i) => (
-              <div
-                key={`sprinkle-${i}`}
-                className="absolute rounded-full"
-                style={{
-                  width: `${2 + Math.random() * 4}px`,
-                  height: `${2 + Math.random() * 4}px`,
-                  background: [
-                    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', 
-                    '#FFEAA7', '#DDA0DD', '#FF8A5C', '#A29BFE'
-                  ][i % 8],
-                  left: `${Math.random() * 90 + 5}%`,
-                  top: `${Math.random() * 80 + 10}%`,
-                  opacity: 0.7,
-                  transform: `rotate(${Math.random() * 360}deg)`,
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Dark overlay */}
-          <div className="absolute inset-0 rounded-xl bg-black/5" />
-          
-          {/* Shadow */}
-          <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-[90%] h-4 bg-black/30 blur-xl rounded-full" />
-        </div>
-
-        {/* Cake Plate */}
-        <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-[110%] h-3 bg-gradient-to-b from-gray-300 to-gray-400 rounded-full shadow-lg" />
-        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-[120%] h-2 bg-gradient-to-b from-gray-400 to-gray-500 rounded-full opacity-50" />
+      {/* 3D Embedded Cake from Sketchfab - Transparent Background */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="w-full max-w-3xl h-80 md:h-[450px] rounded-xl overflow-hidden shadow-2xl mb-6 relative"
+      >
+        <iframe
+          title="Birthday Cake 3D Model"
+          frameBorder="0"
+          allowFullScreen
+          mozAllowFullScreen={true}
+          webkitAllowFullScreen={true}
+          allow="autoplay; fullscreen; xr-spatial-tracking"
+          xr-spatial-tracking="true"
+          execution-while-out-of-viewport="true"
+          execution-while-not-rendered="true"
+          web-share="true"
+          src="https://sketchfab.com/models/68b2ac53d5e142d190e2470f51f0b73f/embed?autostart=1&transparent=1&ui_theme=dark&preload=1"
+          style={{
+            width: '100%',
+            height: '100%',
+            background: 'transparent',
+          }}
+        />
+        
+        {/* Subtle gradient overlay to blend with theme */}
+        <div 
+          className={`absolute inset-0 pointer-events-none ${
+            isDarkTheme 
+              ? 'bg-gradient-to-t from-slate-900/30 via-transparent to-slate-900/20'
+              : 'bg-gradient-to-t from-blue-50/30 via-transparent to-pink-50/20'
+          }`}
+        />
       </motion.div>
 
-      {/* Cake Message (when blown) */}
+      {/* Cake Details (optional - can remove if using only 3D model) */}
+      <Cake blown={blown} isDarkTheme={isDarkTheme} />
+
+      {/* Wish Modal */}
+      <AnimatePresence>
+        {showWishModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowWishModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className={`rounded-2xl p-8 shadow-2xl max-w-md w-full ${
+                isDarkTheme
+                  ? 'bg-gradient-to-br from-purple-900 to-slate-900 border border-purple-500/30'
+                  : 'bg-white border border-pink-200'
+              }`}
+            >
+              <h2
+                className={`text-2xl md:text-3xl font-bold mb-4 text-center ${
+                  isDarkTheme ? 'text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400' : 'text-purple-600'
+                }`}
+              >
+                ✨ Make a Wish ✨
+              </h2>
+
+              <p className={`text-sm text-center mb-4 ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`}>
+                Close your eyes and make a wish from the heart...
+              </p>
+
+              <textarea
+                value={wish}
+                onChange={(e) => setWish(e.target.value)}
+                placeholder="Type your wish here... 🙏"
+                className={`w-full p-4 rounded-lg mb-4 resize-none focus:outline-none focus:ring-2 ${
+                  isDarkTheme
+                    ? 'bg-slate-800 border-purple-500 focus:ring-purple-500 text-white placeholder-gray-400'
+                    : 'bg-gray-50 border-pink-300 focus:ring-pink-400 text-slate-900 placeholder-gray-500'
+                }`}
+                rows={4}
+                autoFocus
+              />
+
+              <div className="flex gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setShowWishModal(false)}
+                  className={`flex-1 py-3 rounded-lg font-semibold transition-colors ${
+                    isDarkTheme
+                      ? 'bg-slate-700 hover:bg-slate-600 text-white'
+                      : 'bg-gray-200 hover:bg-gray-300 text-slate-900'
+                  }`}
+                >
+                  Cancel
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleConfirmWish}
+                  disabled={!wish.trim()}
+                  className={`flex-1 py-3 rounded-lg font-semibold text-white transition-all shadow-lg ${
+                    wish.trim()
+                      ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 cursor-pointer'
+                      : 'bg-gray-400 cursor-not-allowed opacity-50'
+                  }`}
+                >
+                  🎂 Make Wish
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Action Buttons */}
+      <div className="flex gap-4 mt-6 flex-wrap justify-center">
+        {!wishMade && !blown && (
+          <motion.button
+            onClick={handleMakeWish}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`px-6 md:px-8 py-3 md:py-4 rounded-full text-base md:text-lg font-semibold transition-all shadow-lg ${
+              isDarkTheme
+                ? 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white'
+                : 'bg-gradient-to-r from-blue-400 to-cyan-400 hover:from-blue-500 hover:to-cyan-500 text-white'
+            }`}
+          >
+            🙏 Make a Wish
+          </motion.button>
+        )}
+
+        {wishMade && !blown && (
+          <motion.button
+            onClick={blowCandles}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`px-6 md:px-8 py-3 md:py-4 rounded-full text-base md:text-lg font-semibold transition-all shadow-lg text-white ${
+              isDarkTheme
+                ? 'bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 hover:from-pink-600 hover:via-red-600 hover:to-orange-600'
+                : 'bg-gradient-to-r from-pink-400 via-red-400 to-orange-400 hover:from-pink-500 hover:via-red-500 hover:to-orange-500'
+            }`}
+          >
+            💨 Blow the Candles!
+          </motion.button>
+        )}
+      </div>
+
+      {/* Celebration Message */}
       {blown && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-8 text-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 text-center"
         >
-          <p className={`text-2xl md:text-3xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent`}>
-            🎂 Happy Birthday! 🎂
-          </p>
-          <p className={`text-sm mt-1 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
-            May your day be as sweet as this cake! ✨
-          </p>
+          <h3
+            className={`text-xl md:text-2xl font-bold ${
+              isDarkTheme
+                ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-purple-300'
+                : 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 via-pink-500 to-purple-500'
+            }`}
+          >
+            🎉 Happy Birthday, Arfa! 🎉
+          </h3>
+          {wish && (
+            <p className={`text-sm md:text-base mt-2 italic ${isDarkTheme ? 'text-gray-300' : 'text-slate-600'}`}>
+              💫 {wish}
+            </p>
+          )}
         </motion.div>
       )}
-    </motion.div>
+
+      {/* Balloons and Confetti */}
+      <BalloonSystem show={blown} isDarkTheme={isDarkTheme} />
+      <ConfettiSystem show={blown} />
+    </div>
   )
 }
