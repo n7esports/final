@@ -11,10 +11,6 @@ import { FloatingHearts } from '@/components/birthday/floating-hearts'
 import { ThemeToggle } from '@/components/birthday/theme-toggle'
 import CakeScene from "@/components/birthday/cake-scene/CakeScene"
 
-export default function Home() {
-  return <CakeScene />
-}
-
 type Phase = 'countdown' | 'celebration' | 'experience'
 
 export default function BirthdayPage() {
@@ -58,9 +54,9 @@ export default function BirthdayPage() {
               <Hero />
               <PolaroidBoard />
               
-              {/* Birthday Scene - Full height with reduced padding */}
+              {/* Cake Scene - Full height with reduced padding */}
               <div className="relative -mx-4 md:-mx-8">
-                <BirthdayScene />
+                <CakeScene />
               </div>
               
               <GalaxyGallery />
