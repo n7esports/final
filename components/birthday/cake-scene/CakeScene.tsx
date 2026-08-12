@@ -2,25 +2,63 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, useGLTF, Environment, PerspectiveCamera } from '@react-three/drei'
+import { OrbitControls, useGLTF, Environment } from '@react-three/drei'
 import * as THREE from 'three'
 import BalloonSystem from './BalloonSystem'
 import ConfettiSystem from './ConfettiSystem'
 import BackgroundDecor from './BackgroundDecor'
-import { Moon, Sun, Volume2, VolumeX } from 'lucide-react'
+import { Moon, Sun, Volume2, VolumeX, Mic, MicOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-// Realistic Candle Component
-function Candle3D({ position, isLit, delay }: { position: [number, number, number]; isLit: boolean; delay: number }) {
-  const candleRef = useRef<THREE.Group>(null)
+// Realistic Candle Component (Smaller, Properly Sized)
+function Candle3D({ 
+  position, 
+  isLit, 
+  delay,
+  onBlow 
+}: { 
+  position: [number, number, number]; 
+  isLit: boolean; 
+  delay: number;
+  onBlow?: () => void;
+}) {
   const flameRef = useRef<THREE.Mesh>(null)
   const glowRef = useRef<THREE.Mesh>(null)
+  const smokeRef = useRef<THREE.Group>(null)
+  const [isBlown, setIsBlown] = useState(false)
 
+  // Smoke particles when blown
   useEffect(() => {
-    if (candleRef.current) {
-      candleRef.current.position.set(position[0], position[1], position[2])
+    if (!isLit && smokeRef.current) {
+      setIsBlown(true)
+      // Trigger smoke animation
+      const particles = smokeRef.current.children
+      particles.forEach((particle, i) => {
+        const mesh = particle as THREE.Mesh
+        const startY = mesh.position.y
+        const startX = mesh.position.x
+        const delay2 = i * 0.1
+        
+        setTimeout(() => {
+          // Animate smoke rising
+          const animateSmoke = () => {
+            if (mesh.position.y > startY + 3) return
+            mesh.position.y += 0.02
+            mesh.position.x += (Math.random() - 0.5) * 0.01
+            mesh.position.z += (Math.random() - 0.5) * 0.01
+            mesh.scale.x += 0.002
+            mesh.scale.y += 0.002
+            const opacity = 1 - (mesh.position.y - startY) / 3
+            if (mesh.material) {
+              (mesh.material as THREE.MeshStandardMaterial).opacity = opacity * 0.6
+            }
+            requestAnimationFrame(animateSmoke)
+          }
+          animateSmoke()
+        }, delay2 * 1000)
+      })
     }
-  }, [position])
+  }, [isLit])
 
   // Flame animation
   useEffect(() => {
@@ -34,15 +72,11 @@ function Candle3D({ position, isLit, delay }: { position: [number, number, numbe
       const flicker = Math.sin(time * 15) * 0.08 + Math.sin(time * 23) * 0.05
       const flicker2 = Math.sin(time * 18 + 1) * 0.06
       
-      // Flame scale flicker
       flameRef.current.scale.x = 1 + flicker
       flameRef.current.scale.y = 1 + flicker2 * 0.5
+      flameRef.current.position.x = Math.sin(time * 12) * 0.02
+      flameRef.current.position.z = Math.cos(time * 14) * 0.02
       
-      // Flame position wobble
-      flameRef.current.position.x = Math.sin(time * 12) * 0.03
-      flameRef.current.position.z = Math.cos(time * 14) * 0.03
-      
-      // Glow pulse
       glowRef.current.scale.x = 1 + Math.sin(time * 8) * 0.05
       glowRef.current.scale.y = 1 + Math.sin(time * 10) * 0.05
       
@@ -54,10 +88,10 @@ function Candle3D({ position, isLit, delay }: { position: [number, number, numbe
   }, [isLit, delay])
 
   return (
-    <group ref={candleRef}>
-      {/* Candle Stick */}
-      <mesh position={[0, 0.6, 0]} castShadow>
-        <cylinderGeometry args={[0.08, 0.1, 1.2, 8]} />
+    <group position={position}>
+      {/* Candle Stick - Thinner and smaller */}
+      <mesh position={[0, 0.3, 0]} castShadow>
+        <cylinderGeometry args={[0.04, 0.05, 0.6, 8]} />
         <meshStandardMaterial 
           color="#f5e6d3" 
           roughness={0.8}
@@ -66,8 +100,8 @@ function Candle3D({ position, isLit, delay }: { position: [number, number, numbe
       </mesh>
 
       {/* Candle Top (wax) */}
-      <mesh position={[0, 1.2, 0]} castShadow>
-        <cylinderGeometry args={[0.09, 0.08, 0.05, 8]} />
+      <mesh position={[0, 0.6, 0]} castShadow>
+        <cylinderGeometry args={[0.045, 0.04, 0.03, 8]} />
         <meshStandardMaterial 
           color="#f0d5c0" 
           roughness={0.9}
@@ -75,32 +109,21 @@ function Candle3D({ position, isLit, delay }: { position: [number, number, numbe
         />
       </mesh>
 
-      {/* Candle Stripes (decorative) */}
-      {[0.2, 0.6, 1.0].map((y, i) => (
-        <mesh key={i} position={[0, y, 0]}>
-          <torusGeometry args={[0.09, 0.015, 6, 12]} />
-          <meshStandardMaterial 
-            color={i % 2 === 0 ? "#e8d5c4" : "#d4c4b4"} 
-            roughness={0.9}
-          />
-        </mesh>
-      ))}
-
       {/* Wick */}
-      <mesh position={[0, 1.25, 0]}>
-        <cylinderGeometry args={[0.01, 0.015, 0.06, 4]} />
+      <mesh position={[0, 0.63, 0]}>
+        <cylinderGeometry args={[0.005, 0.008, 0.04, 4]} />
         <meshStandardMaterial color="#333" roughness={1} />
       </mesh>
 
-      {/* Flame */}
+      {/* Flame - Smaller */}
       {isLit && (
         <>
-          {/* Outer Flame (orange) */}
+          {/* Outer Flame */}
           <mesh 
             ref={flameRef}
-            position={[0, 1.35, 0]}
+            position={[0, 0.7, 0]}
           >
-            <sphereGeometry args={[0.08, 8, 8]} />
+            <sphereGeometry args={[0.05, 8, 8]} />
             <meshStandardMaterial 
               color="#ff6b00" 
               emissive="#ff4400"
@@ -110,12 +133,12 @@ function Candle3D({ position, isLit, delay }: { position: [number, number, numbe
             />
           </mesh>
 
-          {/* Inner Flame (yellow) */}
+          {/* Inner Flame */}
           <mesh 
-            position={[0, 1.38, 0]}
+            position={[0, 0.72, 0]}
             scale={[0.6, 0.7, 0.6]}
           >
-            <sphereGeometry args={[0.07, 8, 8]} />
+            <sphereGeometry args={[0.04, 8, 8]} />
             <meshStandardMaterial 
               color="#ffdd00" 
               emissive="#ffaa00"
@@ -125,12 +148,12 @@ function Candle3D({ position, isLit, delay }: { position: [number, number, numbe
             />
           </mesh>
 
-          {/* Core Flame (white) */}
+          {/* Core Flame */}
           <mesh 
-            position={[0, 1.42, 0]}
+            position={[0, 0.74, 0]}
             scale={[0.3, 0.4, 0.3]}
           >
-            <sphereGeometry args={[0.05, 6, 6]} />
+            <sphereGeometry args={[0.03, 6, 6]} />
             <meshStandardMaterial 
               color="#ffffff" 
               emissive="#ffffff"
@@ -140,46 +163,70 @@ function Candle3D({ position, isLit, delay }: { position: [number, number, numbe
             />
           </mesh>
 
-          {/* Glow Light */}
+          {/* Glow */}
           <mesh 
             ref={glowRef}
-            position={[0, 1.3, 0]}
+            position={[0, 0.65, 0]}
           >
-            <sphereGeometry args={[0.3, 8, 8]} />
+            <sphereGeometry args={[0.2, 8, 8]} />
             <meshStandardMaterial 
               color="#ff6600" 
               emissive="#ff4400"
-              emissiveIntensity={0.5}
+              emissiveIntensity={0.3}
               transparent
-              opacity={0.15}
+              opacity={0.1}
             />
           </mesh>
 
-          {/* Point Light for realistic illumination */}
           <pointLight 
-            position={[0, 1.4, 0]} 
+            position={[0, 0.7, 0]} 
             color="#ff6600" 
-            intensity={0.5} 
-            distance={2}
+            intensity={0.3} 
+            distance={1.5}
           />
         </>
       )}
+
+      {/* Smoke Particles */}
+      <group ref={smokeRef}>
+        {Array.from({ length: 12 }).map((_, i) => (
+          <mesh 
+            key={i}
+            position={[
+              (Math.random() - 0.5) * 0.1,
+              0.7 + Math.random() * 0.1,
+              (Math.random() - 0.5) * 0.1
+            ]}
+          >
+            <sphereGeometry args={[0.02 + Math.random() * 0.02, 4, 4]} />
+            <meshStandardMaterial 
+              color="#cccccc" 
+              transparent 
+              opacity={0}
+              roughness={1}
+            />
+          </mesh>
+        ))}
+      </group>
     </group>
   )
 }
 
 // 3D Cake Component with Candles
-function Cake3D({ blown, isDarkTheme }: { blown: boolean; isDarkTheme: boolean }) {
+function Cake3D({ blown, isDarkTheme, onCandleBlow }: { 
+  blown: boolean; 
+  isDarkTheme: boolean;
+  onCandleBlow?: () => void;
+}) {
   const { scene } = useGLTF('/models/cake.glb')
   const groupRef = useRef<THREE.Group>(null)
   
   useEffect(() => {
     if (scene) {
-      // Scale and position the model
-      scene.scale.set(1.5, 1.5, 1.5)
-      scene.position.set(0, -0.3, 0)
+      // Scale up the cake (2x larger)
+      scene.scale.set(2.5, 2.5, 2.5)
+      scene.position.set(0, -0.5, 0)
       
-      // Make sure the model is visible
       scene.traverse((child) => {
         if (child.isMesh) {
           child.castShadow = true
@@ -189,16 +236,16 @@ function Cake3D({ blown, isDarkTheme }: { blown: boolean; isDarkTheme: boolean }
     }
   }, [scene])
 
-  // Candle positions on top of cake (circular arrangement)
+  // Candle positions - ON TOP of the cake (adjusted y to sit on cake surface)
   const candlePositions: [number, number, number][] = [
-    [-0.6, 1.2, -0.4],
-    [-0.4, 1.2, -0.7],
-    [0, 1.2, -0.8],
-    [0.4, 1.2, -0.7],
-    [0.6, 1.2, -0.4],
-    [0.5, 1.2, 0.3],
-    [0, 1.2, 0.5],
-    [-0.5, 1.2, 0.3],
+    [-0.5, 1.0, -0.3],
+    [-0.3, 1.0, -0.5],
+    [0, 1.0, -0.6],
+    [0.3, 1.0, -0.5],
+    [0.5, 1.0, -0.3],
+    [0.4, 1.0, 0.2],
+    [0, 1.0, 0.4],
+    [-0.4, 1.0, 0.2],
   ]
 
   return (
@@ -213,6 +260,7 @@ function Cake3D({ blown, isDarkTheme }: { blown: boolean; isDarkTheme: boolean }
           position={pos}
           isLit={!blown}
           delay={index * 0.1}
+          onBlow={onCandleBlow}
         />
       ))}
     </group>
@@ -227,7 +275,11 @@ export default function CakeScene() {
   const [isDarkTheme, setIsDarkTheme] = useState(true)
   const [isMusicPlaying, setIsMusicPlaying] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const [audioLevel, setAudioLevel] = useState(0)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const recognitionRef = useRef<any>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
 
   // Initialize audio
   useEffect(() => {
@@ -259,6 +311,98 @@ export default function CakeScene() {
     }
   }, [blown, isMusicPlaying])
 
+  // Voice Recognition for "Blow"
+  useEffect(() => {
+    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition
+      recognitionRef.current = new SpeechRecognition()
+      recognitionRef.current.continuous = true
+      recognitionRef.current.interimResults = true
+      recognitionRef.current.lang = 'en-US'
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0].transcript)
+          .join('')
+          .toLowerCase()
+        
+        if (transcript.includes('blow') || transcript.includes('blow out') || transcript.includes('candle')) {
+          if (wishMade && !blown) {
+            handleBlowCandles()
+          }
+        }
+      }
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.log('Speech recognition error:', event.error)
+      }
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
+      }
+    }
+  }, [wishMade, blown])
+
+  // Microphone audio level detection
+  const startListening = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const analyser = audioContext.createAnalyser()
+      analyser.fftSize = 256
+      const source = audioContext.createMediaStreamSource(stream)
+      source.connect(analyser)
+      analyserRef.current = analyser
+
+      setIsListening(true)
+
+      // Monitor audio levels for blow detection
+      const dataArray = new Uint8Array(analyser.frequencyBinCount)
+      const checkLevel = () => {
+        if (!isListening || !analyserRef.current) return
+        analyserRef.current.getByteFrequencyData(dataArray)
+        const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length
+        setAudioLevel(average)
+        
+        // If loud sound detected (blowing), trigger blow
+        if (average > 100 && wishMade && !blown) {
+          handleBlowCandles()
+        }
+        
+        requestAnimationFrame(checkLevel)
+      }
+      checkLevel()
+
+      // Start voice recognition
+      if (recognitionRef.current) {
+        recognitionRef.current.start()
+      }
+
+    } catch (error) {
+      console.log('Microphone access denied:', error)
+    }
+  }
+
+  const stopListening = () => {
+    setIsListening(false)
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
+    }
+    if (analyserRef.current) {
+      analyserRef.current = null
+    }
+  }
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening()
+    } else {
+      startListening()
+    }
+  }
+
   const handleMakeWish = () => {
     setShowWishModal(true)
   }
@@ -267,11 +411,28 @@ export default function CakeScene() {
     if (wish.trim()) {
       setWishMade(true)
       setShowWishModal(false)
+      // Start listening for blow after wish is made
+      if (!isListening) {
+        startListening()
+      }
     }
   }
 
   const handleBlowCandles = () => {
-    setBlown(true)
+    if (!blown) {
+      setBlown(true)
+      stopListening()
+      // Show celebration message
+      setTimeout(() => {
+        setShowCelebration(true)
+      }, 500)
+    }
+  }
+
+  const handleMouseBlow = () => {
+    if (wishMade && !blown) {
+      handleBlowCandles()
+    }
   }
 
   const toggleTheme = () => {
@@ -295,7 +456,7 @@ export default function CakeScene() {
 
   return (
     <div
-      className={`relative min-h-[600px] flex flex-col items-center justify-center overflow-hidden transition-colors duration-300 p-4 ${
+      className={`relative min-h-[700px] flex flex-col items-center justify-center overflow-hidden transition-colors duration-300 p-4 ${
         isDarkTheme
           ? 'bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 text-white'
           : 'bg-gradient-to-b from-blue-50 via-pink-50 to-blue-50 text-slate-900'
@@ -334,30 +495,27 @@ export default function CakeScene() {
       </motion.button>
 
       {/* 3D Cake Canvas */}
-      <div className="w-full max-w-4xl h-80 md:h-[500px] rounded-2xl overflow-hidden shadow-2xl mb-4 relative">
+      <div className="w-full max-w-4xl h-[500px] md:h-[600px] rounded-2xl overflow-hidden shadow-2xl mb-4 relative">
         <Canvas
-          camera={{ position: [0, 2, 5], fov: 45 }}
+          camera={{ position: [2, 3, 6], fov: 40 }}
           style={{ background: 'transparent' }}
         >
-          {/* Lighting */}
           <ambientLight intensity={0.6} />
           <directionalLight position={[5, 10, 5]} intensity={1.2} castShadow />
           <directionalLight position={[-5, 5, 5]} intensity={0.5} />
           <spotLight position={[0, 5, 0]} intensity={0.8} />
           <hemisphereLight groundColor="#443366" intensity={0.3} />
           
-          {/* 3D Cake with Candles */}
-          <Cake3D blown={blown} isDarkTheme={isDarkTheme} />
+          <Cake3D blown={blown} isDarkTheme={isDarkTheme} onCandleBlow={handleBlowCandles} />
           
-          {/* Orbit Controls - LIMITED ROTATION */}
           <OrbitControls
             enableZoom={true}
             enablePan={false}
-            autoRotate={false}  // Disabled - no 360 rotation
-            minPolarAngle={0.5}
-            maxPolarAngle={1.2}
-            minAzimuthAngle={-0.8}  // Limit left rotation
-            maxAzimuthAngle={0.8}   // Limit right rotation
+            autoRotate={false}
+            minPolarAngle={0.3}
+            maxPolarAngle={1.0}
+            minAzimuthAngle={-0.5}
+            maxAzimuthAngle={0.5}
             target={[0, 0.5, 0]}
             enableDamping={true}
             dampingFactor={0.05}
@@ -366,7 +524,44 @@ export default function CakeScene() {
           <Environment preset="studio" />
         </Canvas>
 
-        {/* Overlay message when blown */}
+        {/* Click to Blow overlay */}
+        {wishMade && !blown && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          >
+            <div className="bg-black/30 backdrop-blur-sm p-4 rounded-2xl text-center max-w-sm pointer-events-auto cursor-pointer"
+              onClick={handleMouseBlow}
+            >
+              <p className="text-white text-lg font-semibold">
+                💨 Click here or say "Blow" to blow the candles!
+              </p>
+              <div className="mt-2 flex items-center justify-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${isListening ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                <span className="text-white/70 text-sm">
+                  {isListening ? 'Listening...' : 'Microphone off'}
+                </span>
+                {audioLevel > 50 && (
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div 
+                        key={i}
+                        className="w-1 bg-green-400 rounded-full"
+                        style={{ 
+                          height: `${Math.min(audioLevel / 20, 20)}px`,
+                          opacity: audioLevel > 50 + i * 10 ? 1 : 0.3
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Celebration overlay */}
         {blown && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -398,7 +593,7 @@ export default function CakeScene() {
         )}
         {wishMade && !blown && (
           <p className={`text-sm ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`}>
-            🕯️ Now blow the candles!
+            🕯️ Blow the candles! (Click on screen or use microphone)
           </p>
         )}
         {blown && (
@@ -407,6 +602,23 @@ export default function CakeScene() {
           </p>
         )}
       </div>
+
+      {/* Microphone Toggle Button */}
+      {wishMade && !blown && (
+        <motion.button
+          onClick={toggleListening}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className={`mb-4 px-4 py-2 rounded-full text-sm font-semibold transition-all shadow-lg flex items-center gap-2 ${
+            isListening
+              ? 'bg-green-500 hover:bg-green-600 text-white'
+              : 'bg-gray-500 hover:bg-gray-600 text-white'
+          }`}
+        >
+          {isListening ? <Mic size={16} /> : <MicOff size={16} />}
+          {isListening ? 'Listening for "Blow"' : 'Enable Microphone'}
+        </motion.button>
+      )}
 
       {/* Wish Modal */}
       <AnimatePresence>
@@ -501,21 +713,6 @@ export default function CakeScene() {
             }`}
           >
             🙏 Make a Wish
-          </motion.button>
-        )}
-
-        {wishMade && !blown && (
-          <motion.button
-            onClick={handleBlowCandles}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className={`px-6 md:px-8 py-3 md:py-4 rounded-full text-base md:text-lg font-semibold transition-all shadow-lg text-white ${
-              isDarkTheme
-                ? 'bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 hover:from-pink-600 hover:via-red-600 hover:to-orange-600'
-                : 'bg-gradient-to-r from-pink-400 via-red-400 to-orange-400 hover:from-pink-500 hover:via-red-500 hover:to-orange-500'
-            }`}
-          >
-            💨 Blow the Candles!
           </motion.button>
         )}
       </div>
